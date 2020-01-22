@@ -3,7 +3,6 @@ import cv2
 from functools import lru_cache
 from functools import partial
 from os.path import join
-import matplotlib.pyplot as plt
 
 def brightness_score(img):
     '''

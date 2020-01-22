@@ -2,7 +2,6 @@ import unittest
 import cv2
 from cv2 import dnn_Net
 from maruti.vision import image
-import matplotlib.pyplot as plt
 import os
 TEST_DATA_PATH = 'data/test_data'
 
