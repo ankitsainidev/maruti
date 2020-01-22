@@ -2,7 +2,7 @@ import json
 import zipfile
 from tqdm.auto import tqdm
 
-
+print(__file__)
 def read_json(path):
     '''
     Read Json file as dict.
@@ -20,8 +20,8 @@ def write_json(dictionary, path):
         json.dump(dictionary, fp)
 
 
-def unzip(zipfile, path='.'):
-    with zipfile.ZipFile(zipfile) as zf:
+def unzip(zip_path, path='.'):
+    with zipfile.ZipFile(zip_path) as zf:
         for member in tqdm(zf.infolist(), desc='Extracting '):
             try:
                 zf.extract(member, path)
