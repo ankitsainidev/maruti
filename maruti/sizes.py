@@ -6,7 +6,7 @@ def byte_to_mb(size):
     return size/(1024**2)
 
 
-def dir_size(path='.'):
+def dir_size(start_path='.'):
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(start_path):
         for f in filenames:
@@ -19,8 +19,8 @@ def dir_size(path='.'):
 
 
 def file_size(path):
-    file_stats = os.stat(file_name)
-    return byte_to_mb(file_stats.file_size)
+    file_stats = os.stat(path)
+    return byte_to_mb(file_stats.st_size)
 
 
 def var_size(var):
