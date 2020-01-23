@@ -10,7 +10,7 @@ from os.path import join
 import shlex
 import time
 from collections import defaultdict
-from .utils import unzip
+from .utils import unzip, read_json
 from .sizes import file_size
 from tqdm.auto import tqdm
 
@@ -41,7 +41,7 @@ class VideoDataset:
 
         metadata_path = metadata_path if metadata_path else self.path/'metadata.json'
         try:
-            self.metadata = open_json(metadata_path)
+            self.metadata = read_json(metadata_path)
         except FileNotFoundError:
             del metadata_path
             print('metadata file not found.\n Some functionalities may not work.')
@@ -68,7 +68,7 @@ class VideoDataset:
                 zip_size = new_size
             except FileNotFoundError:
                 continue
-        if download.poll() != 200:
+        if download.poll() != 0:
             print('some error')
             print('download', download.poll())
         download.terminate()

@@ -7,7 +7,7 @@ import os
 
 class UtilsTests(unittest.TestCase):
 
-    def test_open_json(self):
+    def test_read_write_json(self):
         with tempfile.TemporaryDirectory() as dir:
             # creating dictionary
             sample = {'h': 3, 'd': {'j': 4}}
