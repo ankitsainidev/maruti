@@ -1,6 +1,7 @@
 from sys import getsizeof
 import os
 
+__all__ = ['dir_size','file_size','var_size']
 
 def byte_to_mb(size):
     return size/(1024**2)

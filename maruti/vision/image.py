@@ -5,7 +5,12 @@ from functools import partial
 from os.path import join
 import os
 
-DATA_PATH = join(os.path.dirname(__file__),'data/')
+__all__ = ['brightness_score', 'adjust_brightness', 'detect_faces', 'crop_around_point', 'get_face',
+           'get_face_center', 'detect_sized_face', 'detect_rescaled_face', 'detect_sized_rescaled_face']
+
+DATA_PATH = join(os.path.dirname(__file__), 'data/')
+
+
 def brightness_score(img):
     '''
     @params:
@@ -27,7 +32,7 @@ def adjust_brightness(img, min_brightness):
 
 
 @lru_cache(maxsize=2)
-def create_net(path=join(DATA_PATH,'cvCafee')):
+def create_net(path=join(DATA_PATH, 'cvCafee')):
     '''
     Creates net for face detection.
     '''
@@ -61,7 +66,7 @@ def crop_around_point(img, point, size):
     h, w = img.shape[:2]
     n_h, n_w = size
     r_h, r_w = h, w
-    
+
     if h < n_h:
         r_h = n_h
     if w < n_w:
@@ -73,7 +78,6 @@ def crop_around_point(img, point, size):
         r_w = int(r_w*h_ratio/w_ratio)
     elif w_ratio > h_ratio:
         r_h = int(r_h*w_ratio/h_ratio)
-
 
     pre_w, post_w = n_w//2, n_w-(n_w//2)
     pre_h, post_h = n_h//2, n_h-(n_h//2)
@@ -153,7 +157,7 @@ def detect_sized_rescaled_face(img, size, rescale_factor=1.3, brightness_values=
         img, brightness_values=[], threshold=0.6, bright_face_crop=True, net=None)
     face_h = endY - startY
     face_w = endX - startX
-    w,h = size
+    w, h = size
     face_h *= rescale_factor
     face_w *= rescale_factor
     h_ratio = face_h/h
@@ -162,6 +166,7 @@ def detect_sized_rescaled_face(img, size, rescale_factor=1.3, brightness_values=
         face_w = face_w*h_ratio/w_ratio
     elif w_ratio > h_ratio:
         face_h = face_h*w_ratio/h_ratio
-    face = crop_around_point(img, ((startX+endX)//2, (startY+endY)//2), (int(face_w), int(face_h)))
-    resized_face = cv2.resize(face,(size[1],size[0]))
+    face = crop_around_point(
+        img, ((startX+endX)//2, (startY+endY)//2), (int(face_w), int(face_h)))
+    resized_face = cv2.resize(face, (size[1], size[0]))
     return resized_face
