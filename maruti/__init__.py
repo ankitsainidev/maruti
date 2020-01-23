@@ -3,6 +3,6 @@ from . import sizes
 from . import vision
 from . import deepfake
 
-from .utils import read_json
+from .utils import *
 from .sizes import *
 from .deepfake import VideoDataset

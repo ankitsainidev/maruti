@@ -57,9 +57,8 @@ class VideoDataset:
         command_args = shlex.split(command)
         fp = open(os.devnull, 'w')
         download = subprocess.Popen(command_args, stdout=fp, stderr=fp)
-        bar = tqdm(total=10240)
+        bar = tqdm(total=10240, desc='Downloading ')
         zip_size = 0
-        print('before', download.poll())
         while download.poll() is None:
             time.sleep(0.1)
             try:
@@ -85,7 +84,7 @@ class VideoDataset:
 
         if os.path.exists(pathlib.Path(download_path)/folder):
             return cls(pathlib.Path(download_path)/folder)
-        downloaded_zip = self.download_part(
+        downloaded_zip = cls.download_part(
             part=part, download_path=download_path, cookies_path=cookies_path)
         unzip(downloaded_zip)
         os.remove(download_path+f'/dfdc_train_part_{part}.zip')
