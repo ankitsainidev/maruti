@@ -2,7 +2,7 @@ import json
 import zipfile
 from tqdm.auto import tqdm
 
-print(__file__)
+
 def read_json(path):
     '''
     Read Json file as dict.
