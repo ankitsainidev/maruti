@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="maruti",
-    version="0.0.9",
+    version="0.1.0",
     author="Ankit Saini",
     author_email="ankitsaini100205@gmail.com",
     description="Maruti Library",
@@ -21,6 +21,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.5',
-
     install_requires=['tqdm==4.40.2','opencv-python']
 )
