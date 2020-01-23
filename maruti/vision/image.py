@@ -3,7 +3,9 @@ import cv2
 from functools import lru_cache
 from functools import partial
 from os.path import join
+import os
 
+DATA_PATH = join(os.path.dirname(__file__),'data/')
 def brightness_score(img):
     '''
     @params:
@@ -25,7 +27,7 @@ def adjust_brightness(img, min_brightness):
 
 
 @lru_cache(maxsize=2)
-def create_net(path='data/cvCafee'):
+def create_net(path=join(DATA_PATH,'cvCafee')):
     '''
     Creates net for face detection.
     '''

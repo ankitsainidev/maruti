@@ -6,6 +6,7 @@ import subprocess
 import zipfile
 import concurrent.futures
 import os
+from os.path import join
 import shlex
 import time
 from collections import defaultdict
@@ -13,6 +14,7 @@ from .utils import unzip
 from .sizes import file_size
 from tqdm.auto import tqdm
 
+DATA_PATH = join(os.path.dirname(__file__),'data/')
 
 def split_videos(meta_file):
     '''
@@ -48,7 +50,7 @@ class VideoDataset:
             self.video_groups = split_videos(self.metadata)
 
     @staticmethod
-    def download_part(part='00', download_path='.', cookies_path='data/kaggle/cookies.txt'):
+    def download_part(part='00', download_path='.', cookies_path=join(DATA_PATH,'kaggle','cookies.txt')):
         dataset_path = f'https://www.kaggle.com/c/16880/datadownload/dfdc_train_part_{part}.zip'
         folder = f'dfdc_train_part_{int(part)}'
         command = f'wget -c --load-cookies {cookies_path} {dataset_path} -P {download_path}'
@@ -77,7 +79,7 @@ class VideoDataset:
 
     @classmethod
     def from_part(cls, part='00',
-                  cookies_path='.a5dev_data/cookies.txt',
+                  cookies_path=join(DATA_PATH,'kaggle','cookies.txt'),
                   download_path='.'):
         folder = f'dfdc_train_part_{int(part)}'
 

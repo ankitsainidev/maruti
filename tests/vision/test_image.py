@@ -3,7 +3,7 @@ import cv2
 from cv2 import dnn_Net
 from maruti.vision import image
 import os
-TEST_DATA_PATH = 'data/test_data'
+TEST_DATA_PATH = 'test_data'
 
 
 class ImageTests(unittest.TestCase):
