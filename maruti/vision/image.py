@@ -8,7 +8,7 @@ import os
 __all__ = ['brightness_score', 'adjust_brightness', 'detect_faces', 'crop_around_point', 'get_face',
            'get_face_center', 'detect_sized_face', 'detect_rescaled_face', 'detect_sized_rescaled_face']
 
-DATA_PATH = join(os.path.dirname(__file__), 'data/')
+DATA_PATH = join(os.path.dirname(__file__), 'data')
 
 
 def brightness_score(img):
