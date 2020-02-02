@@ -46,6 +46,7 @@ class Learner:
         best_loss = float('inf')
         each_train_info = []
         each_val_info = []
+        complete_info = {}
         header_string = ''
         headings = ['Train Loss', 'Val Loss']
         for i in range(len(self.metrics)):
@@ -97,10 +98,10 @@ class Learner:
             if 'losses' in val_info:
                 info_values.append(format_infos(val_info['losses'], 12))
                 if torch.stack(val_info['losses']).mean().item() < best_loss:
-                    each_val_info['best_state_dict'] = self.model.state_dict()
+                    complete_info['best_state_dict'] = self.model.state_dict()
             else:
                 if torch.stack(train_info['losses']).mean().item() < best_loss:
-                    each_val_info['best_state_dict'] = self.model.state_dict()
+                    complete_info['best_state_dict'] = self.model.state_dict()
                 info_values.append(str(None).center(12))
 
             for i, metric in enumerate(self.metrics):
@@ -117,7 +118,9 @@ class Learner:
 
             each_train_info.append(train_info)
             each_val_info.append(val_info)
-        return {'train': each_train_info, 'val': each_val_info}
+        complete_info = {**complete_info,
+                         'train': each_train_info, 'val': each_val_info}
+        return complete_info
 
     def validate(self, val_loader):
         information = {}
