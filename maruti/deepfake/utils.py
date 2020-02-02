@@ -57,7 +57,7 @@ class Learner:
             header_string += _limit_string(heading, 12).center(12) + '|'
         header_string += 'Time'.center(12) + '|'
         print(header_string)
-        cb.start(epochs)
+
         # train
         self.optimizer.zero_grad()
 
