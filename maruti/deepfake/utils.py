@@ -7,6 +7,10 @@ import time
 tqdm_nl = partial(tqdm, leave=False)
 
 
+class Callback:
+    pass
+
+
 def _limit_string(string, length):
     string = str(string)
     if length > len(string):
@@ -39,6 +43,7 @@ class Learner:
 
     def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1):
         # TODO: test for model on same device
+        best_loss = float('inf')
         each_train_info = []
         each_val_info = []
         header_string = ''
@@ -52,10 +57,12 @@ class Learner:
             header_string += _limit_string(heading, 12).center(12) + '|'
         header_string += 'Time'.center(12) + '|'
         print(header_string)
-
+        cb.start(epochs)
         # train
         self.optimizer.zero_grad()
+
         for epoch in tqdm_nl(range(epochs)):
+
             self.model.train()
             train_info = {}
             val_info = {}
@@ -89,7 +96,11 @@ class Learner:
 
             if 'losses' in val_info:
                 info_values.append(format_infos(val_info['losses'], 12))
+                if val_info['losses'].mean().item() < best_loss:
+                    each_val_info['best_state_dict'] = model.state_dict()
             else:
+                if train_info['losses'].mean().item() < best_loss:
+                    each_val_info['best_state_dict'] = model.state_dict()
                 info_values.append(str(None).center(12))
 
             for i, metric in enumerate(self.metrics):
@@ -103,6 +114,7 @@ class Learner:
             info_values.append(_time_rep(total_time).center(12))
 
             tqdm.write('|'.join(info_values) + '|')
+
             each_train_info.append(train_info)
             each_val_info.append(val_info)
         return {'train': each_train_info, 'val': each_val_info}
