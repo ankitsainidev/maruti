@@ -114,7 +114,7 @@ class Learner:
         for metric in self.metrics:
             information['metrics'][metric.__name__] = []
 
-        model.eval()
+        self.model.eval()
         val_loss = torch.zeros(1)
         start_time = time.perf_counter()
         with torch.set_grad_enabled(False):
