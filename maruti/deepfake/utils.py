@@ -97,10 +97,10 @@ class Learner:
             if 'losses' in val_info:
                 info_values.append(format_infos(val_info['losses'], 12))
                 if torch.stack(val_info['losses']).mean().item() < best_loss:
-                    each_val_info['best_state_dict'] = model.state_dict()
+                    each_val_info['best_state_dict'] = self.model.state_dict()
             else:
                 if torch.stack(train_info['losses']).mean().item() < best_loss:
-                    each_val_info['best_state_dict'] = model.state_dict()
+                    each_val_info['best_state_dict'] = self.model.state_dict()
                 info_values.append(str(None).center(12))
 
             for i, metric in enumerate(self.metrics):
