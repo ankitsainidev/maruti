@@ -5,21 +5,21 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="maruti",
-    version="0.0.1",
+    version="1.1.0",
     author="Ankit Saini",
     author_email="ankitsaini100205@gmail.com",
     description="Maruti Library",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ankitsainidev/maruti",
-    packages=['maruti'],
+    packages=['maruti', 'maruti.vision', 'maruti.deepfake'],
     package_dir={'maruti': 'maruti'},
-    package_data={'maruti': ['data/*/*','vision/data/*/*']},
+    package_data={'maruti': ['data/*/*', 'vision/data/*/*']},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.5',
-    install_requires=['tqdm==4.40.2','opencv-python','torch-lr-finder']
+    install_requires=['tqdm==4.40.2', 'opencv-python', 'torch-lr-finder']
 )
