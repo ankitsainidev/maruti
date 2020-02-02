@@ -5,13 +5,14 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="maruti",
-    version="1.1.0",
+    version="1.3.1",
     author="Ankit Saini",
     author_email="ankitsaini100205@gmail.com",
     description="Maruti Library",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/ankitsainidev/maruti",
+    download_url = 'https://github.com/ankitsainidev/maruti/archive/v1.3.tar.gz',
     packages=['maruti', 'maruti.vision', 'maruti.deepfake'],
     package_dir={'maruti': 'maruti'},
     package_data={'maruti': ['data/*/*', 'vision/data/*/*']},

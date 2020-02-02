@@ -73,9 +73,9 @@ class Learner:
                 loss.backward()
 
                 if (i + 1) % accumulation_steps == 0:
-                    # self.optimizer.step()
-                    # if hasattr(self, 'lr_scheduler'):
-                    #     self.lr_scheduler.step()
+                    self.optimizer.step()
+                    if hasattr(self, 'lr_scheduler'):
+                        self.lr_scheduler.step()
                     self.optimizer.zero_grad()
             train_info['time'] = time.perf_counter() - start_time
 
@@ -101,7 +101,7 @@ class Learner:
             if 'time' in val_info:
                 total_time += val_info['time']
             info_values.append(_time_rep(total_time).center(12))
-            # print('|'.join(info_values), end='|\n')
+
             tqdm.write('|'.join(info_values) + '|')
             each_train_info.append(train_info)
             each_val_info.append(val_info)
