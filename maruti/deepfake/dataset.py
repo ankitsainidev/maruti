@@ -10,11 +10,13 @@ from os.path import join
 import shlex
 import time
 from collections import defaultdict
-from .utils import unzip, read_json
-from .sizes import file_size
+from ..utils import unzip, read_json
+from ..sizes import file_size
 from tqdm.auto import tqdm
 
-DATA_PATH = join(os.path.dirname(__file__),'data/')
+DATA_PATH = join(os.path.dirname(__file__), 'data/')
+__all__ = ['split_videos', 'VideoDataset']
+
 
 def split_videos(meta_file):
     '''
@@ -39,7 +41,7 @@ class VideoDataset:
         self.path = pathlib.Path(path)
         self.video_paths = list(self.path.glob('*.mp4'))
 
-        metadata_path = metadata_path if metadata_path else self.path/'metadata.json'
+        metadata_path = metadata_path if metadata_path else self.path / 'metadata.json'
         try:
             self.metadata = read_json(metadata_path)
         except FileNotFoundError:
@@ -50,7 +52,7 @@ class VideoDataset:
             self.video_groups = split_videos(self.metadata)
 
     @staticmethod
-    def download_part(part='00', download_path='.', cookies_path=join(DATA_PATH,'kaggle','cookies.txt')):
+    def download_part(part='00', download_path='.', cookies_path=join(DATA_PATH, 'kaggle', 'cookies.txt')):
         dataset_path = f'https://www.kaggle.com/c/16880/datadownload/dfdc_train_part_{part}.zip'
         folder = f'dfdc_train_part_{int(part)}'
         command = f'wget -c --load-cookies {cookies_path} {dataset_path} -P {download_path}'
@@ -63,7 +65,7 @@ class VideoDataset:
             time.sleep(0.1)
             try:
                 new_size = int(
-                    file_size(download_path+f'/dfdc_train_part_{part}.zip'))
+                    file_size(download_path + f'/dfdc_train_part_{part}.zip'))
                 bar.update(new_size - zip_size)
                 zip_size = new_size
             except FileNotFoundError:
@@ -74,21 +76,21 @@ class VideoDataset:
         download.terminate()
         fp.close()
         bar.close()
-        return download_path+f'/dfdc_train_part_{part}.zip'
+        return download_path + f'/dfdc_train_part_{part}.zip'
 
     @classmethod
     def from_part(cls, part='00',
-                  cookies_path=join(DATA_PATH,'kaggle','cookies.txt'),
+                  cookies_path=join(DATA_PATH, 'kaggle', 'cookies.txt'),
                   download_path='.'):
         folder = f'dfdc_train_part_{int(part)}'
 
-        if os.path.exists(pathlib.Path(download_path)/folder):
-            return cls(pathlib.Path(download_path)/folder)
+        if os.path.exists(pathlib.Path(download_path) / folder):
+            return cls(pathlib.Path(download_path) / folder)
         downloaded_zip = cls.download_part(
             part=part, download_path=download_path, cookies_path=cookies_path)
         unzip(downloaded_zip)
-        os.remove(download_path+f'/dfdc_train_part_{part}.zip')
-        path = pathlib.Path(download_path)/folder
+        os.remove(download_path + f'/dfdc_train_part_{part}.zip')
+        path = pathlib.Path(download_path) / folder
         return cls(path)
 
     def __len__(self):
@@ -100,12 +102,12 @@ class VideoDataset:
         else starting from k.
         '''
         if k != -1:
-            if n+k >= len(self.video_groups):
+            if n + k >= len(self.video_groups):
                 warn(RuntimeWarning(
                     'n+k is greater then video length. Returning available'))
-                n = len(self.video_groups)-k-1
-            return self.video_groups[k:n+k]
+                n = len(self.video_groups) - k - 1
+            return self.video_groups[k:n + k]
         if n >= len(self.video_groups):
             warn(RuntimeWarning('n is greater then total groups. Returning available'))
-            n = len(self.video_groups)-1
+            n = len(self.video_groups) - 1
         return choices(self.video_groups, k=n)
