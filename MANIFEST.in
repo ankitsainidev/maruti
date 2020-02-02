@@ -1,0 +1,4 @@
+include README.md
+include maruti/data/*/*
+include maruti/vision/data/*/*
+include test_data/*
