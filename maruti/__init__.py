@@ -3,6 +3,8 @@ from . import sizes
 from . import vision
 from . import deepfake
 from . import kaggle
+from . import torch
 from .utils import *
 from .sizes import *
-from .deepfake import VideoDataset, Learner
+from .deepfake import VideoDataset
+from .torch import Learner
