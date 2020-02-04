@@ -3,8 +3,64 @@ from tqdm.auto import tqdm
 from functools import partial
 import torch
 import time
+from collections import Counter
 
 tqdm_nl = partial(tqdm, leave=False)
+
+
+def apply_method(model, method):
+    for param in model.parameters():
+        param.requires_grad = True if method == 'unfreeze' else False
+
+
+def unfreeze(model):
+    apply_method(model, 'unfreeze')
+
+
+def freeze(model):
+    apply_method(model, 'freeze')
+
+
+def apply_recursively(model, layer_dict, method):
+    if layer_dict is None:
+        apply_method(model, method)
+    else:
+        memo = set()
+        for name, child in model.named_children():
+            if name in layer_dict:
+                memo.add(name)
+                freeze_recursively(child, layer_dict[name], method)
+        for name, parameter in model.named_parameters():
+            if name in layer_dict and name not in memo:
+                parameter.requires_grad = True if method == 'unfreeze' else False
+
+
+def _dict_from_layers(layers):
+    if layers is None:
+        return {None}
+
+    splitted = [layer.split('.') for layer in layers]
+    childs = [split[0] for split in splitted]
+    child_count = Counter(childs)
+    layer_dict = {child: {} for child in child_count}
+    none_layers = set()
+    for split in splitted:
+        if len(split) == 1:
+            none_layers.add(split[0])
+        else:
+            layer_dict[split[0]] = {**layer_dict[split[0]],
+                                    **_dict_from_layers(split[1:]), }
+    for none_layer in none_layers:
+        layer_dict[none_layer] = None
+    return layer_dict
+
+
+def freeze_layers(model: 'torch.nn Module', layers: 'generator of layer names'):
+    apply_recursively(model, _dict_from_layers(layers), 'freeze')
+
+
+def unfreeze_layers(model: 'torch.nn Module', layers: 'generator of layer names'):
+    apply_recursively(model, _dict_from_layers(layers), 'unfreeze')
 
 
 def _limit_string(string, length):
