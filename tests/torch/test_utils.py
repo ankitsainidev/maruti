@@ -35,3 +35,11 @@ class TorchUtilsTest(unittest.TestCase):
         utils.unfreeze_layers(self.model, layers)
         for param in self.model.parameters():
             self.assertTrue(param.requires_grad)
+
+    def test_children_names(self):
+        names = utils.children_names(self.model)
+        layers = {'fc', 'layer1', 'layer2', 'layer3',
+                  'layer4', 'conv1', 'bn1', 'relu', 'maxpool', 'avgpool'}
+        self.assertEquals(len(names), len(layers))
+        for name in names:
+            self.assertTrue(name in layers)

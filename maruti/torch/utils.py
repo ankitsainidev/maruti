@@ -8,6 +8,10 @@ from collections import Counter
 tqdm_nl = partial(tqdm, leave=False)
 
 
+def children_names(model):
+    return set([child[0] for child in model.named_children()])
+
+
 def apply_method(model, method):
     for param in model.parameters():
         param.requires_grad = True if method == 'unfreeze' else False
