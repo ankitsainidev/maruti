@@ -7,10 +7,6 @@ import time
 tqdm_nl = partial(tqdm, leave=False)
 
 
-class Callback:
-    pass
-
-
 def _limit_string(string, length):
     string = str(string)
     if length > len(string):
