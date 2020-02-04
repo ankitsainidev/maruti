@@ -29,7 +29,7 @@ def apply_recursively(model, layer_dict, method):
         for name, child in model.named_children():
             if name in layer_dict:
                 memo.add(name)
-                freeze_recursively(child, layer_dict[name], method)
+                apply_recursively(child, layer_dict[name], method)
         for name, parameter in model.named_parameters():
             if name in layer_dict and name not in memo:
                 parameter.requires_grad = True if method == 'unfreeze' else False
