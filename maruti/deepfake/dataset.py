@@ -132,6 +132,7 @@ class VidFromPathLoader:
         vid_meta = metadata[video]
         video_path = join(self.path[vid_meta['part']], video)
         img_reader = self.default_img_reader if img_reader is None else img_reader
+        print(img_reader, type(img_reader))
         return img_reader(video_path, split)
 
 
