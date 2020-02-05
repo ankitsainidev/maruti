@@ -1,5 +1,6 @@
 import cv2
 import os
+import numpy as np
 
 
 class Video(cv2.VideoCapture):
@@ -25,7 +26,7 @@ def get_frames(cap: 'cv2.VideoCapture object', frames: 'iterable<int>', code='rg
         if i in frames:
             _, frame = cap.retrieve()
             if code == 'rgb':
-                yield frame[..., ::-1]
+                yield np.ascontiguousarray(frame[..., ::-1])
             else:
                 yield frame
             if i == last_frame:
