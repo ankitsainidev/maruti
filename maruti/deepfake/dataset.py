@@ -158,7 +158,8 @@ class DeepfakeDataset(Dataset):
             fake_videos = list(metadata[real_video]['fakes'])
             self.dataset.append(real_video)
             if method == 'f12':
-                self.dataset.append(fake_videos[self.iteration % len(fake_videos)])
+                self.dataset.append(
+                    fake_videos[self.iteration % len(fake_videos)])
             elif method == 'f..':
                 self.dataset.append(random.choice(fake_videos))
             elif method == 'f1':
@@ -175,9 +176,9 @@ class DeepfakeDataset(Dataset):
             self.iteration += 1
 
         try:
-            return self.loader(self.metadata, self.videos[i]), torch.tensor([float(self.metadata[os.path.basename(self.total_video[i])]['label'] == 'FAKE')], self.split)
+            return self.loader(self.metadata, self.dataset[i]), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')], self.split)
         except Exception as e:
             return self.error_handler(self, i, e)
 
     def __len__(self):
-        len(self.videos)
+        len(self.dataset)
