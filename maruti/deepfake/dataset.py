@@ -159,14 +159,14 @@ class DeepfakeDataset(Dataset):
             fake_videos = list(metadata[real_video]['fakes'])
             self.dataset.append(real_video)
             if method == 'f12':
-                dataset.append(fake_videos[iteration % len(fake_videos)])
+                self.dataset.append(fake_videos[iteration % len(fake_videos)])
             elif method == 'f..':
-                dataset.append(random.choice(fake_videos))
+                self.dataset.append(random.choice(fake_videos))
             elif method == 'f1':
-                dataset.append(fake_videos[0])
+                self.dataset.append(fake_videos[0])
             elif method == 'ff':
                 for fake_video in fake_videos:
-                    dataset.append(fake_video)
+                    self.dataset.append(fake_video)
             else:
                 raise ValueError(
                     'Not a valid method. Choose from f12, f.., f1, ff')
