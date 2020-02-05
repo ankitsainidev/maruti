@@ -117,9 +117,10 @@ class VideoDataset:
 class VidFromPathLoader:
     """ Loader to use with DeepfakeDataset class"""
 
-    def __init__(self, paths):
+    def __init__(self, paths, img_reader=None):
         """paths as {'00':/part/00,'01'..}"""
         self.path = paths
+        self.img_reader = self.default_img_reader if img_reader is None else img_reader
 
     @staticmethod
     def default_img_reader(path, split='val', max_limit=40):
@@ -128,13 +129,11 @@ class VidFromPathLoader:
             path, [frame_no]))[0]
         return frame
 
-    def __call__(self, metadata, video, img_reader=None, split='val'):
+    def __call__(self, metadata, video, split='val'):
         vid_meta = metadata[video]
         video_path = join(self.path[vid_meta['part']], video)
 
-        img_reader = self.default_img_reader if img_reader is None else img_reader
-
-        return img_reader(video_path, split)
+        return self.img_reader(video_path, split)
 
 
 class DeepfakeDataset(Dataset):
@@ -179,7 +178,7 @@ class DeepfakeDataset(Dataset):
             self.iteration += 1
 
         try:
-            return self.loader(self.metadata, self.dataset[i],split= self.split), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
+            return self.loader(self.metadata, self.dataset[i], split=self.split), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
         except Exception as e:
             if self.error_handler is None:
                 self.error_handler = lambda self, x, e: self[random.randint(
