@@ -147,7 +147,8 @@ class DeepfakeDataset(Dataset):
         error_handler func(self, index, error)->(input, label)"""
     iteration = 0
 
-    def __init__(self, metadata, loader, split='train', method='f12', error_handler=None):
+    def __init__(self, metadata, loader, transform=None, split='train', method='f12', error_handler=None):
+        self.transform = transform
         self.split = split
         self.loader = loader
         self.method = method
@@ -178,7 +179,12 @@ class DeepfakeDataset(Dataset):
             self.iteration += 1
 
         try:
-            return self.loader(self.metadata, self.dataset[i], split=self.split), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
+            img = self.loader(self.metadata, self.dataset[i], split=self.split)
+            label = torch.tensor(
+                [float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
+            if self.transform is not None:
+                img = self.transform(img)
+            return img, label
         except Exception as e:
             if self.error_handler is None:
                 self.error_handler = lambda self, x, e: self[random.randint(
