@@ -131,8 +131,9 @@ class VidFromPathLoader:
     def __call__(self, metadata, video, img_reader=None, split='val'):
         vid_meta = metadata[video]
         video_path = join(self.path[vid_meta['part']], video)
+
         img_reader = self.default_img_reader if img_reader is None else img_reader
-        print(img_reader, type(img_reader))
+
         return img_reader(video_path, split)
 
 
@@ -178,7 +179,7 @@ class DeepfakeDataset(Dataset):
             self.iteration += 1
 
         try:
-            return self.loader(self.metadata, self.dataset[i], self.split), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
+            return self.loader(self.metadata, self.dataset[i],split= self.split), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
         except Exception as e:
             if self.error_handler is None:
                 self.error_handler = lambda self, x, e: self[random.randint(
