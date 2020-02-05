@@ -185,4 +185,4 @@ class DeepfakeDataset(Dataset):
             return self.error_handler(self, i, e)
 
     def __len__(self):
-        len(self.dataset)
+        return len(self.dataset)
