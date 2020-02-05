@@ -29,9 +29,11 @@ def get_frames(cap: 'cv2.VideoCapture object', frames: 'iterable<int>', code='rg
             else:
                 yield frame
             if i == last_frame:
+                cap.release()
                 break
+    cap.release()
 
 
 def get_frames_from_path(path: 'str or posix', frames: 'iterable<int>', code='rgb'):
-    with Video(str(path)) as cap:
-        return get_frames(cap, frames, code)
+    cap = cv2.VideoCapture(str(path))
+    return get_frames(cap, frames, code)
