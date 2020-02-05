@@ -15,7 +15,7 @@ def get_frames(cap: 'cv2.VideoCapture object', frames: 'iterable<int>', code='rg
     curr_index = int(cap.get(cv2.CAP_PROP_POS_FRAMES))
     if curr_index != start_frame:
         cap.set(cv2.CAP_PROP_POS_FRAMES, curr_index)
-    frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     frames = set(frames)
     last_frame = max(frames)
     if frame_count == -1:
