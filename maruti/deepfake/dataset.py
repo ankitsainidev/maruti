@@ -177,7 +177,7 @@ class DeepfakeDataset(Dataset):
             self.iteration += 1
 
         try:
-            return self.loader(self.metadata, self.dataset[i]), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')], self.split)
+            return self.loader(self.metadata, self.dataset[i], self.split), torch.tensor([float(self.metadata[self.dataset[i]]['label'] == 'FAKE')])
         except Exception as e:
             if self.error_handler is None:
                 self.error_handler = lambda self, x, e: self[random.randint(
