@@ -1,20 +1,19 @@
 import pathlib
-import glob
 from warnings import warn
-from random import choices, choice
 import subprocess
-import zipfile
-import concurrent.futures
+
 import os
 from os.path import join
+import torch
 import shlex
 import time
 from collections import defaultdict
 from ..vision.video import get_frames_from_path
+import random
 from ..utils import unzip, read_json
 from ..sizes import file_size
 from tqdm.auto import tqdm
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
 __all__ = ['split_videos', 'VideoDataset']
@@ -56,7 +55,7 @@ class VideoDataset:
     @staticmethod
     def download_part(part='00', download_path='.', cookies_path=join(DATA_PATH, 'kaggle', 'cookies.txt')):
         dataset_path = f'https://www.kaggle.com/c/16880/datadownload/dfdc_train_part_{part}.zip'
-        folder = f'dfdc_train_part_{int(part)}'
+        # folder = f'dfdc_train_part_{int(part)}'
         command = f'wget -c --load-cookies {cookies_path} {dataset_path} -P {download_path}'
         command_args = shlex.split(command)
         fp = open(os.devnull, 'w')
@@ -125,7 +124,7 @@ class VidFromPathLoader:
     @staticmethod
     def default_img_reader(path, split='val', max_limit=40):
         frame_no = 0 if split == 'val' else random.randint(0, max_limit)
-        frame = list(maruti.vision.video.get_frame_from_path(
+        frame = list(get_frames_from_path(
             path, [frame_no]))[0]
         return frame
 
@@ -147,7 +146,7 @@ class DeepfakeDataset(Dataset):
         error_handler func(self, index, error)->(input, label)"""
     iteration = 0
 
-    def __init__(self, metadata, loader, split='train', method='f12', error_handler=lambda self, x, e: self[randint(1, len(self) - 1)]):
+    def __init__(self, metadata, loader, split='train', method='f12', error_handler=lambda self, x, e: self[random.randint(1, len(self) - 1)]):
         self.loader = loader
         self.method = method
         self.error_handler = error_handler
@@ -159,7 +158,7 @@ class DeepfakeDataset(Dataset):
             fake_videos = list(metadata[real_video]['fakes'])
             self.dataset.append(real_video)
             if method == 'f12':
-                self.dataset.append(fake_videos[iteration % len(fake_videos)])
+                self.dataset.append(fake_videos[self.iteration % len(fake_videos)])
             elif method == 'f..':
                 self.dataset.append(random.choice(fake_videos))
             elif method == 'f1':
@@ -173,10 +172,10 @@ class DeepfakeDataset(Dataset):
 
     def __getitem__(self, i):
         if i == 0:
-            iteration += 1
+            self.iteration += 1
 
         try:
-            return self.loader(self.metadata, self.videos[i]), torch.tensor([float(metadata[os.path.basename(self.total_video[i])]['label'] == 'FAKE')], self.split)
+            return self.loader(self.metadata, self.videos[i]), torch.tensor([float(self.metadata[os.path.basename(self.total_video[i])]['label'] == 'FAKE')], self.split)
         except Exception as e:
             return self.error_handler(self, i, e)
 
