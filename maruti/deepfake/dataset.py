@@ -147,7 +147,7 @@ class DeepfakeDataset(Dataset):
     iteration = 0
 
     def __init__(self, metadata, loader, split='train', method='f12', error_handler=None):
-
+        self.split = split
         self.loader = loader
         self.method = method
         self.error_handler = error_handler
