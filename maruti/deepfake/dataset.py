@@ -10,6 +10,7 @@ from os.path import join
 import shlex
 import time
 from collections import defaultdict
+from ..vision.video import get_frames_from_path
 from ..utils import unzip, read_json
 from ..sizes import file_size
 from tqdm.auto import tqdm
@@ -114,6 +115,27 @@ class VideoDataset:
         return choices(self.video_groups, k=n)
 
 
+class VidFromPathLoader:
+    """ Loader to use with DeepfakeDataset class"""
+
+    def __init__(self, paths):
+        """paths as {'00':/part/00,'01'..}"""
+        self.path = paths
+
+    @staticmethod
+    def default_img_reader(path, split='val', max_limit=40):
+        frame_no = 0 if split == 'val' else random.randint(0, max_limit)
+        frame = list(maruti.vision.video.get_frame_from_path(
+            path, [frame_no]))[0]
+        return frame
+
+    def __call__(self, metadata, video, img_reader=None, split='val'):
+        vid_meta = metadata[video]
+        video_path = join(self.path[vid_meta['part']], video)
+        img_reader = self.default_img_reader if img_reader is None else img_reader
+        return img_reader(video_path, split)
+
+
 class DeepfakeDataset(Dataset):
     """Methods 'f12' r1-f1, r1-f2..,(default)
                'f..' r1-f1/f2/f3..
@@ -121,21 +143,23 @@ class DeepfakeDataset(Dataset):
                'ff' r f1 f2 f3..
 
         Metadata 'split'(train-val),'label'(FAKE-REAL),'fakes'([video,video])
-        loader func(metadata[video])->input
+        loader func(metadata,video,split)->input
         error_handler func(self, index, error)->(input, label)"""
     iteration = 0
 
-    def __init__(self, metadata, method='f12', error_handler=lambda self, x, e: self[randint(1, len(self) - 1)]):
+    def __init__(self, metadata, loader, split='train', method='f12', error_handler=lambda self, x, e: self[randint(1, len(self) - 1)]):
+        self.loader = loader
         self.method = method
         self.error_handler = error_handler
         self.metadata = metadata
         self.dataset = []
-        real_videos = list(split_videos(metadata))
+        real_videos = filter(
+            lambda x: metadata[x]['split'] == split, list(split_videos(metadata)))
         for real_video in real_videos:
             fake_videos = list(metadata[real_video]['fakes'])
             self.dataset.append(real_video)
             if method == 'f12':
-                dataset.append(fake_videos[iteration%len(fake_videos)])
+                dataset.append(fake_videos[iteration % len(fake_videos)])
             elif method == 'f..':
                 dataset.append(random.choice(fake_videos))
             elif method == 'f1':
@@ -144,14 +168,15 @@ class DeepfakeDataset(Dataset):
                 for fake_video in fake_videos:
                     dataset.append(fake_video)
             else:
-                raise ValueError('Not a valid method. Choose from f12, f.., f1, ff')
+                raise ValueError(
+                    'Not a valid method. Choose from f12, f.., f1, ff')
 
     def __getitem__(self, i):
         if i == 0:
             iteration += 1
 
         try:
-            return self.loader(self.metadata[self.videos[i]]), torch.tensor([float(metadata[os.path.basename(self.total_video[i])]['label'] == 'FAKE')])
+            return self.loader(self.metadata, self.videos[i]), torch.tensor([float(metadata[os.path.basename(self.total_video[i])]['label'] == 'FAKE')], self.split)
         except Exception as e:
             return self.error_handler(self, i, e)
 
