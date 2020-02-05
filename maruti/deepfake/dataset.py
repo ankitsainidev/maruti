@@ -1,7 +1,7 @@
 import pathlib
 import glob
 from warnings import warn
-from random import choices
+from random import choices, choice
 import subprocess
 import zipfile
 import concurrent.futures
@@ -13,6 +13,7 @@ from collections import defaultdict
 from ..utils import unzip, read_json
 from ..sizes import file_size
 from tqdm.auto import tqdm
+from torch.utils.data import Dataset, DataLoader
 
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
 __all__ = ['split_videos', 'VideoDataset']
@@ -111,3 +112,48 @@ class VideoDataset:
             warn(RuntimeWarning('n is greater then total groups. Returning available'))
             n = len(self.video_groups) - 1
         return choices(self.video_groups, k=n)
+
+
+class DeepfakeDataset(Dataset):
+    """Methods 'f12' r1-f1, r1-f2..,(default)
+               'f..' r1-f1/f2/f3..
+               'f1' r1-f1,
+               'ff' r f1 f2 f3..
+
+        Metadata 'split'(train-val),'label'(FAKE-REAL),'fakes'([video,video])
+        loader func(metadata[video])->input
+        error_handler func(self, index, error)->(input, label)"""
+    iteration = 0
+
+    def __init__(self, metadata, method='f12', error_handler=lambda self, x, e: self[randint(1, len(self) - 1)]):
+        self.method = method
+        self.error_handler = error_handler
+        self.metadata = metadata
+        self.dataset = []
+        real_videos = list(split_videos(metadata))
+        for real_video in real_videos:
+            fake_videos = list(metadata[real_video]['fakes'])
+            self.dataset.append(real_video)
+            if method == 'f12':
+                dataset.append(fake_videos[iteration%len(fake_videos)])
+            elif method == 'f..':
+                dataset.append(random.choice(fake_videos))
+            elif method == 'f1':
+                dataset.append(fake_videos[0])
+            elif method == 'ff':
+                for fake_video in fake_videos:
+                    dataset.append(fake_video)
+            else:
+                raise ValueError('Not a valid method. Choose from f12, f.., f1, ff')
+
+    def __getitem__(self, i):
+        if i == 0:
+            iteration += 1
+
+        try:
+            return self.loader(self.metadata[self.videos[i]]), torch.tensor([float(metadata[os.path.basename(self.total_video[i])]['label'] == 'FAKE')])
+        except Exception as e:
+            return self.error_handler(self, i, e)
+
+    def __len__(self):
+        len(self.videos)

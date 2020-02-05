@@ -1,3 +1,3 @@
 from . import dataset
 from . import models
-from .dataset import VideoDataset
+from .dataset import VideoDataset, DeepfakeDataset

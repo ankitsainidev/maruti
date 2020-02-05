@@ -7,7 +7,7 @@ from collections import Counter
 
 tqdm_nl = partial(tqdm, leave=False)
 
-
+__all__ = ['unfreeze','freeze','unfreeze_layers','freeze_layers','Learner']
 def children_names(model):
     return set([child[0] for child in model.named_children()])
 
