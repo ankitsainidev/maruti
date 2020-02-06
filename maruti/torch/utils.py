@@ -4,10 +4,12 @@ from functools import partial
 import torch
 import time
 from collections import Counter
-
+from torch.utils import data
 tqdm_nl = partial(tqdm, leave=False)
 
-__all__ = ['unfreeze','freeze','unfreeze_layers','freeze_layers','Learner']
+__all__ = ['unfreeze', 'freeze', 'unfreeze_layers', 'freeze_layers', 'Learner']
+
+
 def children_names(model):
     return set([child[0] for child in model.named_children()])
 
@@ -86,9 +88,10 @@ class Learner:
     def __init__(self, model):
         self.model = model
 
-    def compile(self, optimizer, loss, lr_scheduler=None, device='cpu', metrics=None):
+    def compile(self, optimizer, loss, lr_scheduler=None, device='cpu', metrics=None, tot_metrics_prints=3):
         self.optimizer = optimizer
         self.loss = loss
+        self.metrics_plimit = tot_metrics_prints
         self.device = device
         if lr_scheduler is not None:
             self.lr_scheduler = lr_scheduler
@@ -96,9 +99,13 @@ class Learner:
             self.metrics = metrics
         else:
             self.metrics = []
+        for metric in self.metrics:
+            metric.reset()
 
     def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1):
         # TODO: test for model on same device
+        for metric in self.metrics:
+            metric.reset()
         best_loss = float('inf')
         each_train_info = []
         each_val_info = []
@@ -106,8 +113,8 @@ class Learner:
         header_string = ''
         headings = ['Train Loss', 'Val Loss']
         for i in range(len(self.metrics)):
-            headings.append(self.metrics[i].__name__)
-            if i == 2:
+            headings.append(self.metrics[i].name)
+            if i == self.metrics_plimit:
                 break
 
         for heading in headings:
@@ -148,7 +155,7 @@ class Learner:
             info_string = ''
 
             def format_infos(x, length):
-                return _limit_string(round(torch.stack(x).mean().item(), 2), 12).center(12)
+                return _limit_string(round(torch.stack(x).mean().item(), 5), 12).center(12)
             info_values = [format_infos(train_info['losses'], 12)]
 
             if 'losses' in val_info:
@@ -161,9 +168,8 @@ class Learner:
                 info_values.append(str(None).center(12))
 
             for i, metric in enumerate(self.metrics):
-                info_values.append(format_infos(
-                    val_info['metrics'][metric.__name__], 12))
-                if i == 2:
+                info_values.append(str(metric).center(12))
+                if i == self.metrics_plimit:
                     break
             total_time = train_info['time']
             if 'time' in val_info:
@@ -183,7 +189,8 @@ class Learner:
         information['losses'] = []
         information['metrics'] = {}
         for metric in self.metrics:
-            information['metrics'][metric.__name__] = []
+            metric.reset()
+            information['metrics'][metric.name] = []
 
         self.model.eval()
         val_loss = torch.zeros(1)
@@ -196,7 +203,8 @@ class Learner:
                 loss = self.loss(pred, targets)
                 information['losses'].append(loss)
                 for metric in self.metrics:
-                    information['metrics'][metric.__name__].append(
+
+                    information['metrics'][metric.name].append(
                         metric(pred, targets))
 
         total_time = time.perf_counter() - start_time
