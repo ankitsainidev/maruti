@@ -113,7 +113,7 @@ class Learner:
 
         state = {
             'record': self.record,
-            'model': model.state_dict(),
+            'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
 
