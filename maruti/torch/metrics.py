@@ -46,8 +46,8 @@ class BaseMetric:
 
 
 class Accuracy(BaseMetric):
-    def __init__(self, name='accuracy', reduction='mean', starting_value=0):
-        super().__init__(name=name, reduction=reduction, starting_value=starting_value)
+    def __init__(self, name='accuracy'):
+        super().__init__(name=name, reduction='mean', starting_value=0)
 
     def loss(self, ypred, y):
         assert ypred.shape == y.shape, 'invalid dimensions'

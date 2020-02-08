@@ -87,6 +87,10 @@ def _time_rep(seconds):
 class Learner:
     def __init__(self, model):
         self.model = model
+        self.record = {'best_model': model.state_dict,
+                       'best_score': float('inf'),
+                       'history': [],  # history: [[[l1,l2..],[vl1,vl2..]],[2nd epoch]...]
+                       'epoch_summary': []}  # epoch_summary: [[[l.mean,vl.mean..],[2nd epoch]]]
 
     def compile(self, optimizer, loss, lr_scheduler=None, device='cpu', metrics=None, tot_metrics_prints=3):
         self.optimizer = optimizer
@@ -102,35 +106,119 @@ class Learner:
         for metric in self.metrics:
             metric.reset()
 
-    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1):
-        # TODO: test for model on same device
-        for metric in self.metrics:
-            metric.reset()
-        best_loss = float('inf')
-        each_train_info = []
-        each_val_info = []
-        complete_info = {}
+    def state_dict(self):
+        if not hasattr(self, 'optimizer'):
+            print('You need first compile the learner')
+            return
+
+        state = {
+            'record': self.record,
+            'model': model.state_dict(),
+            'optimizer': self.optimizer.state_dict(),
+        }
+
+        if hasattr(self, 'lr_scheduler'):
+            state['lr_scheduler'] = self.lr_scheduler.state_dict()
+
+        return state
+
+    def load_state_dict(self, state):
+        """Return True if everything wents write. Else raises error or returns False."""
+        if not hasattr(self, 'optimizer'):
+            print('Compile with earlier settings.')
+            return False
+        self.optimizer.load_state_dict(state['optimizer'])
+        self.model.load_state_dict(state['model'])
+        self.record = state['record']
+        if hasattr(self, lr_scheduler):
+            self.lr_scheduler.load_state_dict(state['lr_scheduler'])
+        else:
+            if 'lr_scheduler' in state:
+                print(
+                    'lr_scheduler is missing. Recommended to compile with same settings.')
+                return False
+        return True
+
+    @property
+    def header_str(self):
         header_string = ''
+        # loss
         headings = ['Train Loss', 'Val Loss']
+
+        # metrics
         for i in range(len(self.metrics)):
             headings.append(self.metrics[i].name)
             if i == self.metrics_plimit:
                 break
 
+        # time
+        headings.append('Time')
+
+        # getting together
         for heading in headings:
             header_string += _limit_string(heading, 12).center(12) + '|'
-        header_string += 'Time'.center(12) + '|'
-        print(header_string)
+
+        return header_string
+
+    @property
+    def epoch_str(self):
+        info = self.record['epoch_summary'][-1]
+        info_string = ''
+        info_vals = [info['train_loss'], info['val_loss']]
+        for i in range(len(self.metrics)):
+            info_vals.append(info['metrics'][self.metrics[i].name])
+            if i == self.metrics_plimit:
+                break
+        info_vals.append(_time_rep(info['time']))
+        for info_val in info_vals:
+            if isinstance(info_val, int):
+                info_val = round(info_val, 5)
+            info_string += _limit_string(info_val, 12).center(12) + '|'
+
+        return info_string
+
+    @property
+    def summary_str(self):
+        total_time = sum(
+            map(lambda x: x['time'], self.record['epoch_summary']))
+        best_score = self.record['best_score']
+        return f'Total Time: {_time_rep(total_time)}, Best Score: {best_score}'
+
+    def update_record(self):
+        last_summary = self.record['epoch_summary'][-1]
+        representative_loss = 'val_loss' if 'val_loss' in last_summary else 'train_loss'
+        if last_summary[representative_loss] < self.record['best_score']:
+            self.record['best_score'] = last_summary[representative_loss]
+            self.record['best_model'] = self.model.state_dict()
+
+    def create_epoch_summary(self, time):
+        assert len(self.record['history']) == len(
+            self.record['epoch_summary']) + 1
+        epoch_history = self.record['history'][-1]
+        epoch_sum = {'time': time}
+        epoch_sum['train_loss'] = torch.stack(
+            epoch_history['train_loss']).mean().item()
+        if 'val_loss' in epoch_history:
+            epoch_sum['val_loss'] = torch.stack(
+                epoch_history['val_loss']).mean().item()
+        if self.metrics:
+            epoch_sum['metrics'] = {}
+            for metric in self.metrics:
+                epoch_sum['metrics'][metric.name] = metric.value
+        self.record['epoch_summary'].append(epoch_sum)
+
+    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1):
+        # TODO: test for model on same device
+        for metric in self.metrics:
+            metric.reset()
+        print(self.header_str)
 
         # train
         self.optimizer.zero_grad()
 
         for epoch in tqdm_nl(range(epochs)):
-
+            self.record['history'].append({'train_loss': []})
             self.model.train()
-            train_info = {}
-            val_info = {}
-            train_info['losses'] = []
 
             start_time = time.perf_counter()
             train_length = len(train_loader)
@@ -140,7 +228,7 @@ class Learner:
                     self.device), targets.to(self.device)
                 pred = self.model(inputs)
                 loss = self.loss(pred, targets)
-                train_info['losses'].append(loss)
+                self.record['history'][-1]['train_loss'].append(loss)
                 loss.backward()
 
                 if (i + 1) % accumulation_steps == 0:
@@ -148,65 +236,40 @@ class Learner:
                     if hasattr(self, 'lr_scheduler'):
                         self.lr_scheduler.step()
                     self.optimizer.zero_grad()
-            train_info['time'] = time.perf_counter() - start_time
 
             if val_loader is not None:
-                val_info = self.validate(val_loader)
-            info_string = ''
+                self.validate(val_loader)
 
-            def format_infos(x, length):
-                return _limit_string(round(torch.stack(x).mean().item(), 5), 12).center(12)
-            info_values = [format_infos(train_info['losses'], 12)]
+            self.create_epoch_summary(time.perf_counter() - start_time)
+            self.update_record()
+            tqdm.write(self.epoch_str)
 
-            if 'losses' in val_info:
-                info_values.append(format_infos(val_info['losses'], 12))
-                if torch.stack(val_info['losses']).mean().item() < best_loss:
-                    complete_info['best_state_dict'] = self.model.state_dict()
-            else:
-                if torch.stack(train_info['losses']).mean().item() < best_loss:
-                    complete_info['best_state_dict'] = self.model.state_dict()
-                info_values.append(str(None).center(12))
-
-            for i, metric in enumerate(self.metrics):
-                info_values.append(str(metric).center(12))
-                if i == self.metrics_plimit:
-                    break
-            total_time = train_info['time']
-            if 'time' in val_info:
-                total_time += val_info['time']
-            info_values.append(_time_rep(total_time).center(12))
-
-            tqdm.write('|'.join(info_values) + '|')
-
-            each_train_info.append(train_info)
-            each_val_info.append(val_info)
-        complete_info = {**complete_info,
-                         'train': each_train_info, 'val': each_val_info}
-        return complete_info
+        print(self.summary_str)
 
     def validate(self, val_loader):
-        information = {}
-        information['losses'] = []
-        information['metrics'] = {}
+
+        self.record['history'][-1]['val_loss'] = []
+        self.record['history'][-1]['metrics'] = {}
+
         for metric in self.metrics:
             metric.reset()
-            information['metrics'][metric.name] = []
+            self.record['history'][-1]['metrics'][metric.name] = []
 
         self.model.eval()
         val_loss = torch.zeros(1)
-        start_time = time.perf_counter()
+
         with torch.set_grad_enabled(False):
             for inputs, targets in tqdm_nl(val_loader, desc='Validating: '):
                 inputs, targets = inputs.to(
                     self.device), targets.to(self.device)
                 pred = self.model(inputs)
                 loss = self.loss(pred, targets)
-                information['losses'].append(loss)
+                self.record['history'][-1]['val_loss'].append(loss)
                 for metric in self.metrics:
 
-                    information['metrics'][metric.name].append(
+                    self.record['history'][-1]['metrics'][metric.name].append(
                         metric(pred, targets))
 
-        total_time = time.perf_counter() - start_time
-        information['time'] = total_time
-        return information
+
+# if __name__ = '__main__':
+#     model = torch.nn.seq
