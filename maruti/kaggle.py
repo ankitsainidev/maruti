@@ -15,17 +15,10 @@ def update_dataset(path, slug, message='new version', clean=False):
     path = Path(path)
     os.mkdir(path / folder / folder)
     subprocess.call(['kaggle', 'datasets', 'download', '-p',
-                     str(path / folder / folder), 'ankitsainiankit/' + slug])
+                     str(path / folder / folder), 'ankitsainiankit/' + slug, '--unzip'])
 
     subprocess.call(['kaggle', 'datasets', 'metadata', '-p',
                      str(path / folder), 'ankitsainiankit/' + slug])
-
-    zipf = os.listdir(path / folder / folder)[0]
-    with zipfile.ZipFile(path / folder / folder / zipf, 'r') as zip_ref:
-        zip_ref.extractall(path / folder / folder)
-    if not clean:
-        with zipfile.ZipFile(path / folder / folder / zipf, 'r') as zip_ref:
-            zip_ref.extractall(path / folder)
 
     subprocess.call(['kaggle', 'datasets', 'version',
                      '-m', message, '-p', path / folder])
