@@ -247,7 +247,8 @@ class Learner:
         print(self.summary_str)
 
     def validate(self, val_loader):
-
+        if len(self.record['history']) == 0:
+            self.record['history'].append({})
         self.record['history'][-1]['val_loss'] = []
         self.record['history'][-1]['metrics'] = {}
 
