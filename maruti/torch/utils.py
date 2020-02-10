@@ -4,10 +4,14 @@ from functools import partial
 import torch
 import time
 from collections import Counter
+from torchvision import transforms as torch_transforms
 from torch.utils import data
 tqdm_nl = partial(tqdm, leave=False)
 
 __all__ = ['unfreeze', 'freeze', 'unfreeze_layers', 'freeze_layers', 'Learner']
+
+def_norm = torch_transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                      std=[0.229, 0.224, 0.225])
 
 
 def children_names(model):

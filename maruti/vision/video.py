@@ -20,7 +20,7 @@ def get_frames(cap: 'cv2.VideoCapture object', frames: 'iterable<int>', code='rg
     frames = set(frames)
     last_frame = max(frames)
     if frame_count == 0:
-        print('The video is corrupt. Closing')
+        raise Exception('The video is corrupt. Closing')
     for i in range(curr_index, frame_count):
         _ = cap.grab()
         if i in frames:

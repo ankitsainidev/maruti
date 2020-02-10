@@ -8,10 +8,11 @@ import torch
 import shlex
 import time
 from collections import defaultdict
-from ..vision.video import get_frames_from_path
+from ..vision.video import get_frames_from_path, get_frames
 import random
 from ..utils import unzip, read_json
 from ..sizes import file_size
+import numpy as np
 from tqdm.auto import tqdm
 from torch.utils.data import Dataset
 
@@ -120,14 +121,46 @@ class VidFromPathLoader:
     def __init__(self, paths, img_reader=None):
         """paths as {'00':/part/00,'01'..}"""
         self.path = paths
-        self.img_reader = self.default_img_reader if img_reader is None else img_reader
+        self.img_reader = self.img_reader if img_reader is None else img_reader
 
     @staticmethod
-    def default_img_reader(path, split='val', max_limit=40):
+    def img_reader(path, split='val', max_limit=40):
         frame_no = 0 if split == 'val' else random.randint(0, max_limit)
         frame = list(get_frames_from_path(
             path, [frame_no]))[0]
         return frame
+
+    @staticmethod
+    def img_group_reader(path, split='val', mode='distributed', num_frames=4, mode_info=[None]):
+        """use with partial to set mode
+        mode info: distributed -> No Use
+                    forward -> {jumps, index:0, readjust_jumps: True}
+                    backward -> {jumps, index:-1, readjust_jumps: True} -1 refers to end"""
+        cap = cv2.VideoCapture(path)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if mode == 'distributed':
+            frames = np.linspace(0, frame_count - 1, num_frames,  dtype=int)
+        elif mode == 'forward':
+            start = mode_info.get('index', 0)
+            adjust = mode_info.get('readjust_jumps', True)
+            jumps = mode_info['jumps']
+            if adjust:
+                frames = np.linspace(start, min(
+                    frame_count - 1, start + (num_frames - 1) * jumps), num_frames, dtype=int)
+            else:
+                frames = np.linspace(
+                    start, start + (num_frames - 1) * jumps, num_frames, dtype=int)
+        elif mode == 'backward':
+            end = mode_info.get('index', frame_count)
+            adjust = mode_info.get('readjust_jumps', True)
+            jumps = mode_info['jumps']
+            if adjust:
+                frames = np.linspace(
+                    max(0, start - (num_frames - 1) * jumps), end, num_frames, dtype=int)
+            else:
+                frames = np.linspace(
+                    start + (num_frames - 1) * jumps, num_frames, end, dtype=int)
+        return get_frames(cap, frames, 'rgb')
 
     def __call__(self, metadata, video, split='val'):
         vid_meta = metadata[video]
@@ -187,8 +220,10 @@ class DeepfakeDataset(Dataset):
             return img, label
         except Exception as e:
             if self.error_handler is None:
-                self.error_handler = lambda self, x, e: self[random.randint(
-                    1, len(self) - 1)]
+                def default_error_handler(obj, x, e):
+                    print(f'on video {x} error: {e}')
+                    return self[random.randint(1, len(self) - 1)]
+                self.error_handler = default_error_handler
             return self.error_handler(self, i, e)
 
     def __len__(self):
