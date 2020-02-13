@@ -90,7 +90,7 @@ class VideoDataset:
             return cls(pathlib.Path(download_path) / folder)
         downloaded_zip = cls.download_part(
             part=part, download_path=download_path, cookies_path=cookies_path)
-        unzip(downloaded_zip)
+        unzip(downloaded_zip, path=download_path)
         os.remove(download_path + f'/dfdc_train_part_{part}.zip')
         path = pathlib.Path(download_path) / folder
         return cls(path)
