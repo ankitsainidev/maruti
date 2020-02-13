@@ -13,6 +13,7 @@ import random
 from ..utils import unzip, read_json
 from ..sizes import file_size
 import numpy as np
+import cv2
 from tqdm.auto import tqdm
 from torch.utils.data import Dataset
 
