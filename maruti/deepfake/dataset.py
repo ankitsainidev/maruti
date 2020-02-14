@@ -20,6 +20,27 @@ from torch.utils.data import Dataset
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
 __all__ = ['split_videos', 'VideoDataset']
 
+transform = {
+    'train': torch_transforms.Compose(
+        [
+            torch_transforms.ToPILImage(),
+            torch_transforms.ColorJitter(0.3, 0.3, 0.3, 0.1),
+            torch_transforms.RandomHorizontalFlip(),
+            torch_transforms.RandomResizedCrop((224, 224), scale=(0.65, 1.0)),
+            torch_transforms.ToTensor(),
+            normalize,
+        ]
+    ),
+    'val': torch_transforms.Compose([
+        torch_transforms.ToTensor(),
+        normalize, ]
+    )
+}
+group_transform = {
+    'train': lambda x: torch.stack(list(map(transform['train'], x))),
+    'val': lambda x: torch.stack(list(map(transform['val'], x)))
+}
+
 
 def split_videos(meta_file):
     '''
