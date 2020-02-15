@@ -15,6 +15,7 @@ from ..sizes import file_size
 import numpy as np
 import cv2
 from tqdm.auto import tqdm
+from torchvision import transforms as torch_transforms
 from torch.utils.data import Dataset
 
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
