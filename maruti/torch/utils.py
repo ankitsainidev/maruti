@@ -249,6 +249,8 @@ class Learner:
             self.update_record()
             tqdm.write(self.epoch_str)
             if save_on_epoch is not None:
+                if os.path.exists(os.path.join(save_on_epoch, name+'_'+str(i-1)+'.pth')):
+                    os.remove(os.path.join(save_on_epoch, name+'_'+str(i-1)+'.pth'))
                 torch.save(self.state_dict(),os.path.join(save_on_epoch, name+'_'+str(i)+'.pth'))
 
         print(self.summary_str)
