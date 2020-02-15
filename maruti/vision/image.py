@@ -22,7 +22,7 @@ def brightness_score(img):
 
 def adjust_brightness(img, min_brightness):
     '''
-    Increase of decrease brightness 
+    Increase of decrease brightness
     @params:
     img - an array with shape (w,h,3)
     '''
@@ -43,14 +43,14 @@ def create_net(path=join(DATA_PATH, 'cvCafee')):
     return net
 
 
-def detect_faces(image, net=None):
+def detect_faces(image, net=None, size = (300,300)):
     '''
     @params: image (h,w,3)
     returns face detection array [., ., condfidence, x1,y1,x2,y2]
     '''
 
     blob = cv2.dnn.blobFromImage(cv2.resize(
-        image, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))
+        image, size, 1.0, size, (104.0, 177.0, 123.0))
     net = create_net() if net is None else net
     net.setInput(blob)
     detections = net.forward()
