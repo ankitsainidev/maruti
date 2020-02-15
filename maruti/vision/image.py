@@ -50,7 +50,7 @@ def detect_faces(image, net=None, size = (300,300)):
     '''
 
     blob = cv2.dnn.blobFromImage(cv2.resize(
-        image, size, 1.0, size, (104.0, 177.0, 123.0))
+        image, size), 1.0, size, (104.0, 177.0, 123.0))
     net = create_net() if net is None else net
     net.setInput(blob)
     detections = net.forward()
