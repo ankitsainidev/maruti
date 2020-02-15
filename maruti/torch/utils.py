@@ -211,7 +211,7 @@ class Learner:
                 epoch_sum['metrics'][metric.name] = metric.value
         self.record['epoch_summary'].append(epoch_sum)
 
-    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='.', save_with_name='learner'):
+    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='.'):
         # TODO: test for model on same device
         # Save_on_epoch = None or False to stop save, else path to save
         for metric in self.metrics:
@@ -249,11 +249,7 @@ class Learner:
             self.update_record()
             tqdm.write(self.epoch_str)
             if save_on_epoch is not None:
-                if os.path.exists(os.path.join(save_on_epoch, name + '_' + str(i - 1) + '.pth')):
-                    os.remove(os.path.join(save_on_epoch,
-                                           name + '_' + str(i - 1) + '.pth'))
-                torch.save(self.state_dict(), os.path.join(
-                    save_on_epoch, name + '_' + str(i) + '.pth'))
+                torch.save(self.state_dict(), save_on_epoch)
 
         print(self.summary_str)
 
