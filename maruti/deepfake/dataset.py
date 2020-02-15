@@ -19,7 +19,7 @@ from torchvision import transforms as torch_transforms
 from torch.utils.data import Dataset
 from ..torch.utils import def_norm as normalize
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
-__all__ = ['split_videos', 'VideoDataset']
+__all__ = ['split_videos', 'VideoDataset','transform','group_transform']
 
 transform = {
     'train': torch_transforms.Compose(
