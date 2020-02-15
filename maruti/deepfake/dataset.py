@@ -17,7 +17,7 @@ import cv2
 from tqdm.auto import tqdm
 from torchvision import transforms as torch_transforms
 from torch.utils.data import Dataset
-
+from ..torch.utils import def_norm as normalize
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
 __all__ = ['split_videos', 'VideoDataset']
 
