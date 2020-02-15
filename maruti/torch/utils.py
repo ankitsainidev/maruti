@@ -196,8 +196,8 @@ class Learner:
             self.record['best_model'] = self.model.state_dict()
 
     def create_epoch_summary(self, time):
-        assert len(self.record['history']) == len(
-            self.record['epoch_summary']) + 1
+        # assert len(self.record['history']) == len(
+        #     self.record['epoch_summary']) + 1
         epoch_history = self.record['history'][-1]
         epoch_sum = {'time': time}
         epoch_sum['train_loss'] = torch.stack(
@@ -249,9 +249,11 @@ class Learner:
             self.update_record()
             tqdm.write(self.epoch_str)
             if save_on_epoch is not None:
-                if os.path.exists(os.path.join(save_on_epoch, name+'_'+str(i-1)+'.pth')):
-                    os.remove(os.path.join(save_on_epoch, name+'_'+str(i-1)+'.pth'))
-                torch.save(self.state_dict(),os.path.join(save_on_epoch, name+'_'+str(i)+'.pth'))
+                if os.path.exists(os.path.join(save_on_epoch, name + '_' + str(i - 1) + '.pth')):
+                    os.remove(os.path.join(save_on_epoch,
+                                           name + '_' + str(i - 1) + '.pth'))
+                torch.save(self.state_dict(), os.path.join(
+                    save_on_epoch, name + '_' + str(i) + '.pth'))
 
         print(self.summary_str)
 

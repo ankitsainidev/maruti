@@ -14,19 +14,17 @@ reduction_dict = {
 class BaseMetric:
     """Base Class for metrics for pytorch"""
 
-    def __init__(self, name=None, reduction='mean', starting_value=0):
+    def __init__(self, name=None, starting_value=0):
         self.iteration = 0
-        if isinstance(reduction, str):
-            self.reduction = reduction_dict[reduction]['function']
-            self.starting_value = reduction_dict[reduction]['starting_value']
-        else:
-            self.reduction = reduction
-            self.starting_value = starting_value
+        self.starting_value = starting_value
         self.value = starting_value
         self.name = name
 
     def loss(self, ypred, y):
         raise NotImplementedError
+
+    def reducer(self, newVal, oldVal, iteration):
+        return progressive_mean(newVal, oldVal, iteration)
 
     def __call__(self, ypred, y):
         newLoss = self.loss(ypred, y)
@@ -34,7 +32,7 @@ class BaseMetric:
         return self.value
 
     def update(self, newVal):
-        self.value = self.reduction(newVal, self.value, self.iteration)
+        self.value = self.reducer(newVal, self.value, self.iteration)
         self.iteration += 1
 
     def reset(self):

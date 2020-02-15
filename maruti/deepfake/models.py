@@ -15,12 +15,23 @@ def resnext50(pretrained=False, feature=False, hidden_size=64):
 
 
 class MultiFrame(nn.Module):
+    """
+    (model
+    model
+    model     -----   linar batchnorm linear -> output
+    .
+    .
+    .)
+    total frames
+    """
+
     def __init__(self, model, frames, feature_size=64):
         super().__init__()
         self.feature = model
         self.frames = frames
-        self.fc = nn.Sequential(nn.Linear(self.feature_size * self.frames, 32),
-                                nn.BatchNorm1d(32), nn.Linear(32, 1))
+        self.feature_size = feature_size
+        self.fc = nn.Sequential(nn.Linear(self.feature_size * self.frames, 16),
+                                nn.BatchNorm1d(16), nn.Linear(16, 1))
 
     def forward(self, x):
         batch_size = x.shape[0]
