@@ -1,7 +1,6 @@
 import cv2
-import os
 import numpy as np
-import ..vision as mvis
+from .. import vision as mvis
 
 
 class Video(cv2.VideoCapture):
