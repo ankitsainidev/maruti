@@ -211,7 +211,7 @@ class Learner:
                 epoch_sum['metrics'][metric.name] = metric.value
         self.record['epoch_summary'].append(epoch_sum)
 
-    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='.'):
+    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth'):
         # TODO: test for model on same device
         # Save_on_epoch = None or False to stop save, else path to save
         for metric in self.metrics:
