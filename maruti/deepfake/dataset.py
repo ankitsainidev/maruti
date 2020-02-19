@@ -244,7 +244,7 @@ class DeepfakeDataset(Dataset):
         except Exception as e:
             if self.error_handler is None:
                 def default_error_handler(obj, x, e):
-                    print(f'on video {x} error: {e}')
+                    print(f'on video {self.dataset[x]} error: {e}')
                     return self[random.randint(1, len(self) - 1)]
                 self.error_handler = default_error_handler
             return self.error_handler(self, i, e)
