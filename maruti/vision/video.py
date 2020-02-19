@@ -1,6 +1,7 @@
 import cv2
 import os
 import numpy as np
+import ..vision as mvis
 
 
 class Video(cv2.VideoCapture):
@@ -38,3 +39,16 @@ def get_frames(cap: 'cv2.VideoCapture object', frames: 'iterable<int>', code='rg
 def get_frames_from_path(path: 'str or posix', frames: 'iterable<int>', code='rgb'):
     cap = cv2.VideoCapture(str(path))
     return get_frames(cap, frames, code)
+
+
+def get_face_frames(path: 'str or posix', frames: 'iterable<int>', code='rgb'):
+    """face frame as numpy"""
+    def get_face(frame):
+        return np.ascontiguousarray(mvis.detect_sized_rescaled_face(frame, (224, 224), 1.1, [1, 1.3, 1.7, 2, 2.5, 3, 0.5, 5],))
+#     return np.ascontiguousarray(frame[...,::-1])
+    frames = map(get_face, get_frames(cap, frame_takes, 'bgr',))
+
+    if code == 'rgb':
+        frames = map(lambda x: x[..., ::-1], frames)
+
+    return frames
