@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torchvision
 from ..torch.utils import freeze
+from torch.nn.utils.rnn import PackedSequence
 
 
 def resnext50(feature=False, pretrained=False):
