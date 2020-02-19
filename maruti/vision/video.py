@@ -45,6 +45,7 @@ def get_face_frames(path: 'str or posix', frames: 'iterable<int>', code='rgb'):
     def get_face(frame):
         return np.ascontiguousarray(mvis.detect_sized_rescaled_face(frame, (224, 224), 1.1, [1, 1.3, 1.7, 2, 2.5, 3, 0.5, 5],))
 #     return np.ascontiguousarray(frame[...,::-1])
+    cap = cv2.VideoCapture(path)
     frames = map(get_face, get_frames(cap, frame_takes, 'bgr',))
 
     if code == 'rgb':
