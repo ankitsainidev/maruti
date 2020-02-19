@@ -255,23 +255,22 @@ class Learner:
 
     def predict(self, data_loader, with_targets=True):
         self.model.eval()
-        predictions = []
-        target = []
+        prediction_ar = []
+        target_ar = []
         with torch.no_grad():
             if with_targets:
                 for inputs, targets in tqdm_nl(data_loader, desc='Predicting: '):
                     inputs, targets = inputs.to(
                         self.device), targets.to(self.device)
                     pred = self.model(inputs)
-                    predictions.append(pred)
-                    targets.append(targets)
-                return torch.cat(predictions), torch.cat(target)
+                    prediction_ar.append(pred)
+                    target_ar.append(targets)
+                return torch.cat(prediction_ar), torch.cat(target_ar)
             for inputs in tqdm_nl(data_loader, desc='Predicting: '):
                 inputs = inputs.to(self.device)
                 pred = self.model(inputs)
-                predictions.append(pred)
-                targets.append(targets)
-            return torch.cat(predictions)
+                prediction_ar.append(pred)
+            return torch.cat(prediction_ar)
 
     def validate(self, val_loader):
         if len(self.record['history']) == 0:
