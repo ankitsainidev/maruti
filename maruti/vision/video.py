@@ -49,6 +49,6 @@ def get_face_frames(path: 'str or posix', frames: 'iterable<int>', code='rgb'):
     frames = map(get_face, get_frames(cap, frames, 'bgr',))
 
     if code == 'rgb':
-        frames = map(lambda x: x[..., ::-1], frames)
+        frames = map(lambda x: np.ascontiguousarray(x[..., ::-1]), frames)
 
     return frames
