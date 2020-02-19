@@ -108,7 +108,7 @@ def get_face(img, brightness_values=[], threshold=0.6, bright_face_crop=True, ne
     i = 0
     best_detection = {
         'confidence': detection[0][2], 'detection': detection, 'image': img, 'brightness_value': brightness_score(img)}
-    while brightness_values and detection[0][2] < threshold:
+    while i < len(brightness_values) and detection[0][2] < threshold:
         if i < len(brightness_values):
             n_image = adjust_brightness(img, brightness_values[i])
             detection = detect_faces(n_image, net)
