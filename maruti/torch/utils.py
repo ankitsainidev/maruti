@@ -253,6 +253,26 @@ class Learner:
 
         print(self.summary_str)
 
+    def predict(self, data_loader, with_targets=True):
+        self.model.eval()
+        predictions = []
+        target = []
+        with torch.no_grad():
+            if with_targets:
+                for inputs, targets in tqdm_nl(data_loader, desc='Predicting: '):
+                    inputs, targets = inputs.to(
+                        self.device), targets.to(self.device)
+                    pred = self.model(inputs)
+                    predictions.append(pred)
+                    targets.append(targets)
+                return torch.cat(predictions), torch.cat(target)
+            for inputs in tqdm_nl(data_loader, desc='Predicting: '):
+                inputs = inputs.to(self.device)
+                pred = self.model(inputs)
+                predictions.append(pred)
+                targets.append(targets)
+            return torch.cat(predictions)
+
     def validate(self, val_loader):
         if len(self.record['history']) == 0:
             self.record['history'].append({})
