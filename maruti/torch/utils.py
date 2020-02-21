@@ -5,7 +5,8 @@ import torch
 import time
 from collections import Counter
 from torchvision import transforms as torch_transforms
-from . import callback
+from copy import deepcopy
+from . import callback as mcallback
 tqdm_nl = partial(tqdm, leave=False)
 
 __all__ = ['unfreeze', 'freeze', 'unfreeze_layers', 'freeze_layers', 'Learner']
@@ -88,17 +89,33 @@ def _time_rep(seconds):
         return time.strftime('%M:%S', time.gmtime(seconds))
 
 
-class Recorder(callback.Callback):
+class Recorder(mcallback.Callback):
 
     def __init__(self):
         self.best_model = None
         self.best_score = float('inf')
         self.summaries = []
         self.others = []
+        self.prevs = []
+        # to monitor if the learner was stopped in between of an epoch
+        self.epoch_started = False
+
+    def on_train_start(self, epochs):
+        self.new_state()
+
+    def new_state(self):
+        sd = self.state_dict()
+        del sd['prevs']
+        self.prevs.append(self.state_dict())
+        self.summaries = []
+        self.others = []
 
     def on_epoch_start(self, epoch):
+        if self.epoch_started:
+            self.new_state()
         self.summaries.append({})
         self.others.append({'train_losses': [], 'train_metrics': []})
+        self.epoch_started = True
 
     def on_batch_end(self, train_loss, train_metrics, extras, epoch, batch):
         self.others[epoch]['train_losses'].append(train_loss)
@@ -106,24 +123,27 @@ class Recorder(callback.Callback):
 
     @property
     def last_summary(self):
-        return self.summaries[-1]
+        if self.summaries:
+            return self.summaries[-1]
+        raise Exception('no summaries exists')
 
     def on_epoch_end(self, losses, metrics, extras, epoch):
-        self.summaries[epoch]['train_loss'] = losses['train_loss']
-        self.summaries[epoch]['train_metrics'] = metrics['train_metrics']
+        self.summaries[epoch]['train_loss'] = losses['train']
+        self.summaries[epoch]['train_metrics'] = metrics['train']
         self.summaries[epoch]['time'] = extras['time']
-        representative_loss = 'train_loss'  # for best model udpate
+        representative_loss = 'train'  # for best model udpate
 
-        if 'val_loss' in losses:
-            representative_loss = 'val_loss'
-            self.summaries[epoch]['val_loss'] = losses['val_loss']
+        if 'val' in losses:
+            representative_loss = 'val'
+            self.summaries[epoch]['val_loss'] = losses['val']
 
-        if 'val_metrics' in metrics:
-            self.summaries[epoch]['val_metrics'] = losses['val_metrics']
+        if 'val' in metrics:
+            self.summaries[epoch]['val_metrics'] = metrics['val']
 
         if losses[representative_loss] < self.best_score:
             self.best_score = losses[representative_loss]
             self.best_model = extras['model']
+        self.epoch_started = False
 
     def state_dict(self):
         state = {}
@@ -131,13 +151,15 @@ class Recorder(callback.Callback):
         state['best_model'] = self.best_model
         state['summaries'] = self.summaries
         state['others'] = self.others
-        return state
+        state['prevs'] = self.prevs
+        return deepcopy(state)
 
     def load_state_dict(self, state):
         self.best_score = state['best_score']
         self.best_model = state['best_model']
         self.summaries = state['summaries']
         self.others = state['others']
+        self.prevs = state['prevs']
 
 
 class Learner:
@@ -147,12 +169,12 @@ class Learner:
         self.record = Recorder()
 
     def compile(self, optimizer, loss, lr_scheduler=None,
-                device='cpu', metrics=None, callback=callback.Callback(), max_metric_prints=3):
+                device='cpu', metrics=None, callback=mcallback.Callback(), max_metric_prints=3):
         self.optimizer = optimizer
         self.loss = loss
         self.metrics_plimit = max_metric_prints
         self.device = device
-        self.cb = callback.Compose(callback, self.record)
+        self.cb = mcallback.Compose([callback, self.record])
         if lr_scheduler is not None:
             self.lr_scheduler = lr_scheduler
         if metrics is not None:
@@ -242,7 +264,8 @@ class Learner:
     def execute_metrics(self, ypred, y):
         metric_vals = {}
         for metric in self.metrics:
-            metric_vals[metric.__name__] = metric(ypred, y)
+            # TODO: make better handling of non_scalar metrics
+            metric_vals[metric.__name__] = metric(ypred, y).item()
         return metric_vals
 
     def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth'):
@@ -289,15 +312,15 @@ class Learner:
                         self.lr_scheduler.step()
                     self.optimizer.zero_grad()
 
-                if self.cb.on_batch_end(loss, batch_metrics, {}, epoch, i):
+                if self.cb.on_batch_end(loss.item(), batch_metrics, {}, epoch, i):
                     return
 
             epoch_predictions = torch.cat(epoch_predictions)
             epoch_targets = torch.cat(epoch_targets)
             train_loss = self.loss(
-                epoch_predictions, epoch_targets).clone().detach()
+                epoch_predictions, epoch_targets).clone().detach().item()
             train_metrics = self.execute_metrics(
-                epoch_predictions, epoch_targets).clone().detach()
+                epoch_predictions, epoch_targets)
             losses = {'train': train_loss}
             metrics = {'train': train_metrics}
             if val_loader is not None:
@@ -309,8 +332,6 @@ class Learner:
                 if self.cb.on_validation_end(val_loss, val_metrics, epoch):
                     return
 
-            tqdm.write(self.epoch_str)
-
             if save_on_epoch:
                 torch.save(self.state_dict(), save_on_epoch)
 
@@ -318,6 +339,8 @@ class Learner:
                                 'model': self.model.state_dict()}
             if self.cb.on_epoch_end(losses, metrics, epoch_extra_dict, epoch):
                 return
+            # this should after the epoch_end callback to be ready
+            tqdm.write(self.epoch_str)
         print(self.summary_str)
 
     def predict(self, data_loader, with_targets=True):
@@ -345,6 +368,6 @@ class Learner:
 
     def _validate(self, val_loader):
         pred, target = self.predict(val_loader)
-        loss = self.loss(pred, target).clone().detach()
+        loss = self.loss(pred, target).clone().detach().item()
         metrics = self.execute_metrics(pred, target)
         return loss, metrics

@@ -61,7 +61,8 @@ def Compose(callbacks):
         def on_validation_end(self, loss, metrics, epoch):
             isEnd = False
             for callback in callbacks:
-                isEnd = isEnd or callback.on_validation_end(epoch)
+                isEnd = isEnd or callback.on_validation_end(
+                    loss, metrics, epoch)
             return isEnd
 
         def on_train_start(self, epochs):
