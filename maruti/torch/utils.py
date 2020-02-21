@@ -5,7 +5,7 @@ import torch
 import time
 from collections import Counter
 from torchvision import transforms as torch_transforms
-from .callback import Callback
+from . import callback
 tqdm_nl = partial(tqdm, leave=False)
 
 __all__ = ['unfreeze', 'freeze', 'unfreeze_layers', 'freeze_layers', 'Learner']
@@ -88,30 +88,77 @@ def _time_rep(seconds):
         return time.strftime('%M:%S', time.gmtime(seconds))
 
 
+class Recorder(callback.Callback):
+
+    def __init__(self):
+        self.best_model = None
+        self.best_score = float('inf')
+        self.summaries = []
+        self.others = []
+
+    def on_epoch_start(self, epoch):
+        self.summaries.append({})
+        self.others.append({'train_losses': [], 'train_metrics': []})
+
+    def on_batch_end(self, train_loss, train_metrics, extras, epoch, batch):
+        self.others[epoch]['train_losses'].append(train_loss)
+        self.others[epoch]['train_metrics'].append(train_metrics)
+
+    @property
+    def last_summary(self):
+        return self.summaries[-1]
+
+    def on_epoch_end(self, losses, metrics, extras, epoch):
+        self.summaries[epoch]['train_loss'] = losses['train_loss']
+        self.summaries[epoch]['train_metrics'] = metrics['train_metrics']
+        self.summaries[epoch]['time'] = extras['time']
+        representative_loss = 'train_loss'  # for best model udpate
+
+        if 'val_loss' in losses:
+            representative_loss = 'val_loss'
+            self.summaries[epoch]['val_loss'] = losses['val_loss']
+
+        if 'val_metrics' in metrics:
+            self.summaries[epoch]['val_metrics'] = losses['val_metrics']
+
+        if losses[representative_loss] < self.best_score:
+            self.best_score = losses[representative_loss]
+            self.best_model = extras['model']
+
+    def state_dict(self):
+        state = {}
+        state['best_score'] = self.best_score
+        state['best_model'] = self.best_model
+        state['summaries'] = self.summaries
+        state['others'] = self.others
+        return state
+
+    def load_state_dict(self, state):
+        self.best_score = state['best_score']
+        self.best_model = state['best_model']
+        self.summaries = state['summaries']
+        self.others = state['others']
+
+
 class Learner:
     def __init__(self, model):
         self.model = model
         self.call_count = 0
-        self.record = {'best_model': model.state_dict,
-                       'best_score': float('inf'),
-                       'history': [],  # history: [[[l1,l2..],[vl1,vl2..]],[2nd epoch]...]
-                       'epoch_summary': []}  # epoch_summary: [[[l.mean,vl.mean..],[2nd epoch]]]
+        self.record = Recorder()
 
     def compile(self, optimizer, loss, lr_scheduler=None,
-                device='cpu', metrics=None, callback=Callback(), max_metric_prints=3):
+                device='cpu', metrics=None, callback=callback.Callback(), max_metric_prints=3):
         self.optimizer = optimizer
         self.loss = loss
         self.metrics_plimit = max_metric_prints
         self.device = device
-        self.cb = callback
+        self.cb = callback.Compose(callback, self.record)
         if lr_scheduler is not None:
             self.lr_scheduler = lr_scheduler
         if metrics is not None:
             self.metrics = metrics
         else:
             self.metrics = []
-        for metric in self.metrics:
-            metric.reset()
 
     def state_dict(self):
         if not hasattr(self, 'optimizer'):
@@ -119,7 +166,7 @@ class Learner:
             return
 
         state = {
-            'record': self.record,
+            'record': self.record.state_dict(),
             'model': self.model.state_dict(),
             'optimizer': self.optimizer.state_dict(),
         }
@@ -136,7 +183,7 @@ class Learner:
             return False
         self.optimizer.load_state_dict(state['optimizer'])
         self.model.load_state_dict(state['model'])
-        self.record = state['record']
+        self.record.load_state_dict(state['record'])
         if hasattr(self, 'lr_scheduler'):
             self.lr_scheduler.load_state_dict(state['lr_scheduler'])
         else:
@@ -154,7 +201,7 @@ class Learner:
 
         # metrics
         for i in range(len(self.metrics)):
-            headings.append(self.metrics[i].name)
+            headings.append(self.metrics[i].__name__)
             if i == self.metrics_plimit:
                 break
 
@@ -169,12 +216,12 @@ class Learner:
 
     @property
     def epoch_str(self):
-        info = self.record['epoch_summary'][-1]
+        info = self.record.last_summary
         info_string = ''
         info_vals = [info['train_loss'], info['val_loss']
                      if 'val_loss' in info else None]
         for i in range(len(self.metrics)):
-            info_vals.append(info['metrics'][self.metrics[i].name])
+            info_vals.append(info['val_metrics'][self.metrics[i].__name__])
             if i == self.metrics_plimit:
                 break
         info_vals.append(_time_rep(info['time']))
@@ -188,48 +235,33 @@ class Learner:
     @property
     def summary_str(self):
         total_time = sum(
-            map(lambda x: x['time'], self.record['epoch_summary']))
-        best_score = self.record['best_score']
+            map(lambda x: x['time'], self.record.summaries))
+        best_score = self.record.best_score
         return f'Total Time: {_time_rep(total_time)}, Best Score: {best_score}'
 
-    def update_record(self):
-        last_summary = self.record['epoch_summary'][-1]
-        representative_loss = 'val_loss' if 'val_loss' in last_summary else 'train_loss'
-        if last_summary[representative_loss] < self.record['best_score']:
-            self.record['best_score'] = last_summary[representative_loss]
-            self.record['best_model'] = self.model.state_dict()
-
-    def create_epoch_summary(self, time):
-        # assert len(self.record['history']) == len(
-        #     self.record['epoch_summary']) + 1
-        epoch_history = self.record['history'][-1]
-        epoch_sum = {'time': time}
-        epoch_sum['train_loss'] = torch.stack(
-            epoch_history['train_loss']).mean().item()
-        if 'val_loss' in epoch_history:
-            epoch_sum['val_loss'] = torch.stack(
-                epoch_history['val_loss']).mean().item()
-        if self.metrics:
-            epoch_sum['metrics'] = {}
-            for metric in self.metrics:
-                epoch_sum['metrics'][metric.name] = metric.value
-        self.record['epoch_summary'].append(epoch_sum)
+    def execute_metrics(self, ypred, y):
+        metric_vals = {}
+        for metric in self.metrics:
+            metric_vals[metric.__name__] = metric(ypred, y)
+        return metric_vals
 
     def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth'):
         # TODO: test for model on same device
         # Save_on_epoch = None or False to stop save, else path to save
         self.call_count += 1
-        for metric in self.metrics:
-            metric.reset()
+
         print(self.header_str)
 
         # train
         self.optimizer.zero_grad()
-
+        if self.cb.on_train_start(epochs):
+            return
         for epoch in tqdm_nl(range(epochs)):
+            epoch_predictions = []
+            epoch_targets = []
             if self.cb.on_epoch_start(epoch):
                 return
-            self.record['history'].append({'train_loss': []})
+
             self.model.train()
 
             start_time = time.perf_counter()
@@ -242,32 +274,49 @@ class Learner:
                     self.device), targets.to(self.device)
                 pred = self.model(inputs)
                 loss = self.loss(pred, targets)
-                self.record['history'][-1]['train_loss'].append(loss)
-                loss.backward()
 
+                # logging
+                epoch_predictions.append(pred.clone().detach())
+                epoch_targets.append(targets.clone().detach())
+                batch_metrics = self.execute_metrics(pred, targets)
+
+                #
+
+                loss.backward()
                 if (i + 1) % accumulation_steps == 0:
                     self.optimizer.step()
                     if hasattr(self, 'lr_scheduler'):
                         self.lr_scheduler.step()
                     self.optimizer.zero_grad()
-                if self.cb.on_batch_end(self.record, epoch, i):
+
+                if self.cb.on_batch_end(loss, batch_metrics, {}, epoch, i):
                     return
 
+            epoch_predictions = torch.cat(epoch_predictions)
+            epoch_targets = torch.cat(epoch_targets)
+            train_loss = self.loss(
+                epoch_predictions, epoch_targets).clone().detach()
+            train_metrics = self.execute_metrics(
+                epoch_predictions, epoch_targets).clone().detach()
+            losses = {'train': train_loss}
+            metrics = {'train': train_metrics}
             if val_loader is not None:
                 if self.cb.on_validation_start(epoch):
                     return
-                self._validate(val_loader)
-                if self.cb.on_validation_end(self.record, epoch):
+                val_loss, val_metrics = self._validate(val_loader)
+                losses['val'] = val_loss
+                metrics['val'] = val_metrics
+                if self.cb.on_validation_end(val_loss, val_metrics, epoch):
                     return
 
-            self.create_epoch_summary(time.perf_counter() - start_time)
-            self.update_record()
             tqdm.write(self.epoch_str)
 
             if save_on_epoch:
                 torch.save(self.state_dict(), save_on_epoch)
 
-            if self.cb.on_epoch_end(self.record, epoch):
+            epoch_extra_dict = {'time': time.perf_counter() - start_time,
+                                'model': self.model.state_dict()}
+            if self.cb.on_epoch_end(losses, metrics, epoch_extra_dict, epoch):
                 return
         print(self.summary_str)
 
@@ -292,28 +341,10 @@ class Learner:
 
     def validate(self, val_loader):
         self.call_count += 1
-        self._validate(val_loader)
+        return self._validate(val_loader)
 
     def _validate(self, val_loader):
-        if len(self.record['history']) == 0:
-            self.record['history'].append({})
-        self.record['history'][-1]['val_loss'] = []
-        self.record['history'][-1]['metrics'] = {}
-
-        for metric in self.metrics:
-            metric.reset()
-            self.record['history'][-1]['metrics'][metric.name] = []
-
-        self.model.eval()
-        val_loss = torch.zeros(1)
-        with torch.set_grad_enabled(False):
-            for inputs, targets in tqdm_nl(val_loader, desc='Validating: '):
-                inputs, targets = inputs.to(
-                    self.device), targets.to(self.device)
-                pred = self.model(inputs)
-                loss = self.loss(pred, targets)
-                self.record['history'][-1]['val_loss'].append(loss)
-                for metric in self.metrics:
-
-                    self.record['history'][-1]['metrics'][metric.name].append(
-                        metric(pred, targets))
+        pred, target = self.predict(val_loader)
+        loss = self.loss(pred, target).clone().detach()
+        metrics = self.execute_metrics(pred, target)
+        return loss, metrics

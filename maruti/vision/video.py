@@ -3,6 +3,7 @@ import numpy as np
 from .. import vision as mvis
 from facenet_pytorch import MTCNN
 import torch
+from PIL import Image
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
@@ -50,6 +51,24 @@ def crop_face(img, points, size: "(h,w)" = None):
     if size is not None:
         face = cv2.resize(face, size)
     return face
+
+
+def make_grid(imgs: '(n,h,w,c) tensor or list of (h,w,c) tensor', cols=4):
+    "return numpy array of size (h,w,c) easy for plotting"
+    count = len(imgs)
+    rows = (count + cols - 1) // cols
+
+    h, w = imgs[0].shape[:-1]
+    new_img_w = h * cols
+    new_img_h = w * rows
+    new_img = Image.new('RGB', (new_img_w, new_img_h))
+
+    for i in range(len(imgs)):
+        img = Image.fromarray(imgs[i])
+        x = h * (i % cols)
+        y = h * (i // cols)
+        new_img.paste(img, (x, y))
+    return np.array(new_img)
 
 
 def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224, 224),):
