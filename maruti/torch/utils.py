@@ -309,7 +309,7 @@ class Learner:
                 if self.cb.on_validation_end(val_loss, val_metrics, epoch):
                     return
 
-            tqdm.write(self.epoch_str)
+
 
             if save_on_epoch:
                 torch.save(self.state_dict(), save_on_epoch)
@@ -318,6 +318,7 @@ class Learner:
                                 'model': self.model.state_dict()}
             if self.cb.on_epoch_end(losses, metrics, epoch_extra_dict, epoch):
                 return
+            tqdm.write(self.epoch_str) # this should after the epoch_end callback to be ready
         print(self.summary_str)
 
     def predict(self, data_loader, with_targets=True):
