@@ -4,6 +4,9 @@ from functools import lru_cache
 from functools import partial
 from os.path import join
 import os
+from PIL import Image
+import torch
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 __all__ = ['brightness_score', 'adjust_brightness', 'detect_faces', 'crop_around_point', 'get_face',
            'get_face_center', 'detect_sized_face', 'detect_rescaled_face', 'detect_sized_rescaled_face']
@@ -170,3 +173,20 @@ def detect_sized_rescaled_face(img, size, rescale_factor=1.3, brightness_values=
         img, ((startX + endX) // 2, (startY + endY) // 2), (int(face_w), int(face_h)))
     resized_face = cv2.resize(face, (size[1], size[0]))
     return resized_face
+
+def make_grid(imgs: '(n,h,w,c) tensor or list of (h,w,c) tensor', cols=4):
+    "return numpy array of size (h,w,c) easy for plotting"
+    count = len(imgs)
+    rows = (count + cols - 1) // cols
+
+    h, w = imgs[0].shape[:-1]
+    new_img_w = h * cols
+    new_img_h = w * rows
+    new_img = Image.new('RGB', (new_img_w, new_img_h))
+
+    for i in range(len(imgs)):
+        img = Image.fromarray(imgs[i])
+        x = h * (i % cols)
+        y = h * (i // cols)
+        new_img.paste(img, (x, y))
+    return np.array(new_img)
