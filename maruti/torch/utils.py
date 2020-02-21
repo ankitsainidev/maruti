@@ -152,7 +152,7 @@ class Learner:
         self.loss = loss
         self.metrics_plimit = max_metric_prints
         self.device = device
-        self.cb = mcallback.Compose(callback, self.record)
+        self.cb = mcallback.Compose([callback, self.record])
         if lr_scheduler is not None:
             self.lr_scheduler = lr_scheduler
         if metrics is not None:
