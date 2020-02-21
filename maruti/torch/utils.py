@@ -242,7 +242,8 @@ class Learner:
     def execute_metrics(self, ypred, y):
         metric_vals = {}
         for metric in self.metrics:
-            metric_vals[metric.__name__] = metric(ypred, y)
+            # TODO: make better handling of non_scalar metrics
+            metric_vals[metric.__name__] = metric(ypred, y).item()
         return metric_vals
 
     def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth'):
@@ -289,13 +290,13 @@ class Learner:
                         self.lr_scheduler.step()
                     self.optimizer.zero_grad()
 
-                if self.cb.on_batch_end(loss, batch_metrics, {}, epoch, i):
+                if self.cb.on_batch_end(loss.item(), batch_metrics, {}, epoch, i):
                     return
 
             epoch_predictions = torch.cat(epoch_predictions)
             epoch_targets = torch.cat(epoch_targets)
             train_loss = self.loss(
-                epoch_predictions, epoch_targets).clone().detach()
+                epoch_predictions, epoch_targets).clone().detach().item()
             train_metrics = self.execute_metrics(
                 epoch_predictions, epoch_targets)
             losses = {'train': train_loss}
@@ -309,8 +310,6 @@ class Learner:
                 if self.cb.on_validation_end(val_loss, val_metrics, epoch):
                     return
 
-
-
             if save_on_epoch:
                 torch.save(self.state_dict(), save_on_epoch)
 
@@ -318,7 +317,8 @@ class Learner:
                                 'model': self.model.state_dict()}
             if self.cb.on_epoch_end(losses, metrics, epoch_extra_dict, epoch):
                 return
-            tqdm.write(self.epoch_str) # this should after the epoch_end callback to be ready
+            # this should after the epoch_end callback to be ready
+            tqdm.write(self.epoch_str)
         print(self.summary_str)
 
     def predict(self, data_loader, with_targets=True):
@@ -346,6 +346,6 @@ class Learner:
 
     def _validate(self, val_loader):
         pred, target = self.predict(val_loader)
-        loss = self.loss(pred, target).clone().detach()
+        loss = self.loss(pred, target).clone().detach().item()
         metrics = self.execute_metrics(pred, target)
         return loss, metrics
