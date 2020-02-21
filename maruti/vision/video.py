@@ -59,7 +59,7 @@ def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224
     if mtcnn is None:
         mtcnn = MTCNN(select_largest=False, device=device)
 
-    frames = list(mvis.video.get_frames_from_path(path, frame_idx))
+    frames = list(get_frames_from_path(path, frame_idx))
     small_faces = [cv2.resize(frame, (n_w, n_h)) for frame in frames]
     det, conf = mtcnn.detect(small_faces)
     bbox = list(map(lambda x: x.astype(int) * 2, det.tolist()))

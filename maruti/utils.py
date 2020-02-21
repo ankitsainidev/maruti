@@ -3,7 +3,7 @@ import zipfile
 import time
 from tqdm.auto import tqdm
 
-__all__ = ['rep_time','read_json', 'write_json', 'unzip']
+__all__ = ['rep_time', 'read_json', 'write_json', 'unzip']
 
 
 def rep_time(seconds):
