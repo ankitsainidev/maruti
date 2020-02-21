@@ -2,7 +2,8 @@ import cv2
 import numpy as np
 from .. import vision as mvis
 from facenet_pytorch import MTCNN
-from ..imports.ml import device
+import torch
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
 class Video(cv2.VideoCapture):
