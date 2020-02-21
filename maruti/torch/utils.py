@@ -109,17 +109,17 @@ class Recorder(mcallback.Callback):
         return self.summaries[-1]
 
     def on_epoch_end(self, losses, metrics, extras, epoch):
-        self.summaries[epoch]['train_loss'] = losses['train_loss']
-        self.summaries[epoch]['train_metrics'] = metrics['train_metrics']
+        self.summaries[epoch]['train_loss'] = losses['train']
+        self.summaries[epoch]['train_metrics'] = metrics['train']
         self.summaries[epoch]['time'] = extras['time']
-        representative_loss = 'train_loss'  # for best model udpate
+        representative_loss = 'train'  # for best model udpate
 
-        if 'val_loss' in losses:
-            representative_loss = 'val_loss'
-            self.summaries[epoch]['val_loss'] = losses['val_loss']
+        if 'val' in losses:
+            representative_loss = 'val'
+            self.summaries[epoch]['val_loss'] = losses['val']
 
-        if 'val_metrics' in metrics:
-            self.summaries[epoch]['val_metrics'] = losses['val_metrics']
+        if 'val' in metrics:
+            self.summaries[epoch]['val_metrics'] = metrics['val']
 
         if losses[representative_loss] < self.best_score:
             self.best_score = losses[representative_loss]
