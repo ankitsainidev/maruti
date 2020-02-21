@@ -5,7 +5,7 @@ import torch
 import time
 from collections import Counter
 from torchvision import transforms as torch_transforms
-from . import callback
+from . import callback as mcallback
 tqdm_nl = partial(tqdm, leave=False)
 
 __all__ = ['unfreeze', 'freeze', 'unfreeze_layers', 'freeze_layers', 'Learner']
@@ -88,7 +88,7 @@ def _time_rep(seconds):
         return time.strftime('%M:%S', time.gmtime(seconds))
 
 
-class Recorder(callback.Callback):
+class Recorder(mcallback.Callback):
 
     def __init__(self):
         self.best_model = None
@@ -147,12 +147,12 @@ class Learner:
         self.record = Recorder()
 
     def compile(self, optimizer, loss, lr_scheduler=None,
-                device='cpu', metrics=None, callback=callback.Callback(), max_metric_prints=3):
+                device='cpu', metrics=None, callback=mcallback.Callback(), max_metric_prints=3):
         self.optimizer = optimizer
         self.loss = loss
         self.metrics_plimit = max_metric_prints
         self.device = device
-        self.cb = callback.Compose(callback, self.record)
+        self.cb = mcallback.Compose(callback, self.record)
         if lr_scheduler is not None:
             self.lr_scheduler = lr_scheduler
         if metrics is not None:
