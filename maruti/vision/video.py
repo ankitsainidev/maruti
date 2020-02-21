@@ -69,12 +69,18 @@ def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224
     small_faces = [cv2.resize(frame, (n_w, n_h)) for frame in frames]
     det, conf = mtcnn.detect(small_faces)
     bbox = list(map(lambda x: x.astype(int) * 2, det))
-
+    working_pred = np.array(
+        [(f_h // 2) - 112, (f_w // 2) - 112, (f_h // 2) + 112, (f_h // 2) + 112])
     faces = []
     for frame, box in zip(frames, bbox):
         best_pred = box[0]
         best_pred[[0, 1]] -= margin // 2
         best_pred[[2, 3]] += (margin + 1) // 2
-        faces.append(crop_face(frame, best_pred, size=size))
+        try:
+            cropped_faces = crop_face(frame, best_pred, size=size)
+            working_pred = best_pred
+        except:
+            cropped_faces = crop_face(frame, working_pred, size=size)
+        faces.append(cropped_faces)
 
     return faces
