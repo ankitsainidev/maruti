@@ -297,7 +297,7 @@ class Learner:
             train_loss = self.loss(
                 epoch_predictions, epoch_targets).clone().detach()
             train_metrics = self.execute_metrics(
-                epoch_predictions, epoch_targets).clone().detach()
+                epoch_predictions, epoch_targets)
             losses = {'train': train_loss}
             metrics = {'train': train_metrics}
             if val_loader is not None:
