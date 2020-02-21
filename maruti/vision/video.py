@@ -4,6 +4,7 @@ from .. import vision as mvis
 from facenet_pytorch import MTCNN
 import torch
 from PIL import Image
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
 class Video(cv2.VideoCapture):
