@@ -5,7 +5,7 @@ import torch
 import time
 from collections import Counter
 from torchvision import transforms as torch_transforms
-from torch.utils import data
+from .callback import Callback
 tqdm_nl = partial(tqdm, leave=False)
 
 __all__ = ['unfreeze', 'freeze', 'unfreeze_layers', 'freeze_layers', 'Learner']
@@ -91,16 +91,19 @@ def _time_rep(seconds):
 class Learner:
     def __init__(self, model):
         self.model = model
+        self.call_count = 0
         self.record = {'best_model': model.state_dict,
                        'best_score': float('inf'),
                        'history': [],  # history: [[[l1,l2..],[vl1,vl2..]],[2nd epoch]...]
                        'epoch_summary': []}  # epoch_summary: [[[l.mean,vl.mean..],[2nd epoch]]]
 
-    def compile(self, optimizer, loss, lr_scheduler=None, device='cpu', metrics=None, tot_metrics_prints=3):
+    def compile(self, optimizer, loss, lr_scheduler=None,
+                device='cpu', metrics=None, callback=Callback(), max_metric_prints=3):
         self.optimizer = optimizer
         self.loss = loss
-        self.metrics_plimit = tot_metrics_prints
+        self.metrics_plimit = max_metric_prints
         self.device = device
+        self.cb = callback
         if lr_scheduler is not None:
             self.lr_scheduler = lr_scheduler
         if metrics is not None:
@@ -112,7 +115,7 @@ class Learner:
 
     def state_dict(self):
         if not hasattr(self, 'optimizer'):
-            print('You need first compile the learner')
+            print('You first need to compile the learner')
             return
 
         state = {
@@ -134,7 +137,7 @@ class Learner:
         self.optimizer.load_state_dict(state['optimizer'])
         self.model.load_state_dict(state['model'])
         self.record = state['record']
-        if hasattr(self, lr_scheduler):
+        if hasattr(self, 'lr_scheduler'):
             self.lr_scheduler.load_state_dict(state['lr_scheduler'])
         else:
             if 'lr_scheduler' in state:
@@ -168,7 +171,8 @@ class Learner:
     def epoch_str(self):
         info = self.record['epoch_summary'][-1]
         info_string = ''
-        info_vals = [info['train_loss'], info['val_loss']]
+        info_vals = [info['train_loss'], info['val_loss']
+                     if 'val_loss' in info else None]
         for i in range(len(self.metrics)):
             info_vals.append(info['metrics'][self.metrics[i].name])
             if i == self.metrics_plimit:
@@ -214,6 +218,7 @@ class Learner:
     def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth'):
         # TODO: test for model on same device
         # Save_on_epoch = None or False to stop save, else path to save
+        self.call_count += 1
         for metric in self.metrics:
             metric.reset()
         print(self.header_str)
@@ -222,6 +227,8 @@ class Learner:
         self.optimizer.zero_grad()
 
         for epoch in tqdm_nl(range(epochs)):
+            if self.cb.on_epoch_start(epoch):
+                return
             self.record['history'].append({'train_loss': []})
             self.model.train()
 
@@ -229,6 +236,8 @@ class Learner:
             train_length = len(train_loader)
 
             for i, (inputs, targets) in tqdm_nl(enumerate(train_loader), total=train_length, desc='Training: '):
+                if self.cb.on_batch_start(epoch, i):
+                    return
                 inputs, targets = inputs.to(
                     self.device), targets.to(self.device)
                 pred = self.model(inputs)
@@ -241,16 +250,25 @@ class Learner:
                     if hasattr(self, 'lr_scheduler'):
                         self.lr_scheduler.step()
                     self.optimizer.zero_grad()
+                if self.cb.on_batch_end(self.record, epoch, i):
+                    return
 
             if val_loader is not None:
-                self.validate(val_loader)
+                if self.cb.on_validation_start(epoch):
+                    return
+                self._validate(val_loader)
+                if self.cb.on_validation_end(self.record, epoch):
+                    return
 
             self.create_epoch_summary(time.perf_counter() - start_time)
             self.update_record()
             tqdm.write(self.epoch_str)
-            if save_on_epoch is not None:
+
+            if save_on_epoch:
                 torch.save(self.state_dict(), save_on_epoch)
 
+            if self.cb.on_epoch_end(self.record, epoch):
+                return
         print(self.summary_str)
 
     def predict(self, data_loader, with_targets=True):
@@ -273,6 +291,10 @@ class Learner:
             return torch.cat(prediction_ar)
 
     def validate(self, val_loader):
+        self.call_count += 1
+        self._validate(val_loader)
+
+    def _validate(self, val_loader):
         if len(self.record['history']) == 0:
             self.record['history'].append({})
         self.record['history'][-1]['val_loss'] = []
@@ -284,7 +306,6 @@ class Learner:
 
         self.model.eval()
         val_loss = torch.zeros(1)
-
         with torch.set_grad_enabled(False):
             for inputs, targets in tqdm_nl(val_loader, desc='Validating: '):
                 inputs, targets = inputs.to(
@@ -296,7 +317,3 @@ class Learner:
 
                     self.record['history'][-1]['metrics'][metric.name].append(
                         metric(pred, targets))
-
-
-# if __name__ = '__main__':
-#     model = torch.nn.seq

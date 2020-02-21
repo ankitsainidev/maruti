@@ -1,67 +1,83 @@
 import torch
-from .utils import _limit_string
+import numpy as np
+## "SHAMELESSLY STOLEN" applies here. All credit is to fast ai team.
+# It is just copy and paste from their github repo.
+# Please check them out at fast.ai
+
+def accuracy(preds, targs):
+    preds = torch.max(preds, dim=1)[1]
+    return (preds == targs).float().mean()
 
 
-def progressive_mean(new, old, iteration):
-    return ((old * iteration) + new) / (iteration + 1)
+def accuracy_np(preds, targs):
+    preds = np.argmax(preds, 1)
+    return (preds == targs).mean()
 
 
-reduction_dict = {
-    'mean': {'function': progressive_mean, 'starting_value': 0}
-}
+def accuracy_thresh(thresh):
+    return lambda preds, targs: accuracy_multi(preds, targs, thresh)
 
 
-class BaseMetric:
-    """Base Class for metrics for pytorch"""
-
-    def __init__(self, name=None, starting_value=0):
-        self.iteration = 0
-        self.starting_value = starting_value
-        self.value = starting_value
-        self.name = name
-
-    def loss(self, ypred, y):
-        raise NotImplementedError
-
-    def reducer(self, newVal, oldVal, iteration):
-        return progressive_mean(newVal, oldVal, iteration)
-
-    def __call__(self, ypred, y):
-        newLoss = self.loss(ypred, y)
-        self.update(newLoss)
-        return self.value
-
-    def update(self, newVal):
-        self.value = self.reducer(newVal, self.value, self.iteration)
-        self.iteration += 1
-
-    def reset(self):
-        self.value = self.starting_value
-        self.iteration = 0
-
-    def __str__(self):
-        return _limit_string(round(self.value, 5), 12)
+def accuracy_multi(preds, targs, thresh):
+    return ((preds > thresh).float() == targs).float().mean()
 
 
-class Accuracy(BaseMetric):
-    def __init__(self, name='accuracy'):
-        super().__init__(name=name, reduction='mean', starting_value=0)
-
-    def loss(self, ypred, y):
-        assert ypred.shape == y.shape, 'invalid dimensions'
-        loss = (ypred == y).float().mean()
-        return loss.item()
+def accuracy_multi_np(preds, targs, thresh):
+    return ((preds > thresh) == targs).mean()
 
 
-class BinaryAccuracy(Accuracy):
-    def loss(self, ypred, y):
-        assert ypred.shape == y.shape, 'invalid dimensions'
-        ypred = (ypred > 0.5).float()
-        return super().loss(ypred, y)
+def recall(log_preds, targs, thresh=0.5, epsilon=1e-8):
+    preds = torch.exp(log_preds)
+    pred_pos = torch.max(preds > thresh, dim=1)[1]
+    tpos = torch.mul((targs.byte() == pred_pos.byte()), targs.byte())
+    return tpos.sum() / (targs.sum() + epsilon)
 
 
-class MultiClassAccuracy(Accuracy):
-    def loss(self, ypred, y):
-        assert ypred.shape[:1] == y.shape, 'invalid dimensions'
-        ypred = ypred.max(1)[1]
-        return super().loss(ypred, y)
+def recall_np(preds, targs, thresh=0.5, epsilon=1e-8):
+    pred_pos = preds > thresh
+    tpos = torch.mul((targs.byte() == pred_pos), targs.byte())
+    return tpos.sum() / (targs.sum() + epsilon)
+
+
+def precision(log_preds, targs, thresh=0.5, epsilon=1e-8):
+    preds = torch.exp(log_preds)
+    pred_pos = torch.max(preds > thresh, dim=1)[1]
+    tpos = torch.mul((targs.byte() == pred_pos.byte()), targs.byte())
+    return tpos.sum() / (pred_pos.sum() + epsilon)
+
+
+def precision_np(preds, targs, thresh=0.5, epsilon=1e-8):
+    pred_pos = preds > thresh
+    tpos = torch.mul((targs.byte() == pred_pos), targs.byte())
+    return tpos.sum() / (pred_pos.sum() + epsilon)
+
+
+def fbeta(log_preds, targs, beta, thresh=0.5, epsilon=1e-8):
+    """Calculates the F-beta score (the weighted harmonic mean of precision and recall).
+    This is the micro averaged version where the true positives, false negatives and
+    false positives are calculated globally (as opposed to on a per label basis).
+    beta == 1 places equal weight on precision and recall, b < 1 emphasizes precision and
+    beta > 1 favors recall.
+    """
+    assert beta > 0, 'beta needs to be greater than 0'
+    beta2 = beta ** 2
+    rec = recall(log_preds, targs, thresh)
+    prec = precision(log_preds, targs, thresh)
+    return (1 + beta2) * prec * rec / (beta2 * prec + rec + epsilon)
+
+
+def fbeta_np(preds, targs, beta, thresh=0.5, epsilon=1e-8):
+    """ see fbeta """
+    assert beta > 0, 'beta needs to be greater than 0'
+    beta2 = beta ** 2
+    rec = recall_np(preds, targs, thresh)
+    prec = precision_np(preds, targs, thresh)
+    return (1 + beta2) * prec * rec / (beta2 * prec + rec + epsilon)
+
+
+def f1(log_preds, targs, thresh=0.5):
+    return fbeta(log_preds, targs, 1, thresh)
+
+
+def f1_np(preds, targs, thresh=0.5):
+    return fbeta_np(preds, targs, 1, thresh)
