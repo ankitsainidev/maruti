@@ -57,6 +57,10 @@ def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224
     Consumes more RAM as it stores all the frames in full resolution.
     Try to detect in small batches if needed.
     """
+    cap = cv2.VideoCapture(path)  # for height and width
+    f_h, f_w = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(
+        cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    n_h, n_w = f_h // 2, f_w // 2
     if mtcnn is None:
         mtcnn = MTCNN(select_largest=False, device=device)
 
