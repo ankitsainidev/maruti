@@ -1,3 +1,9 @@
+from datetime import datetime
+import os
+from torch.utils.tensorboard import SummaryWriter
+from copy import deepcopy
+
+
 class Callback:
     def on_epoch_end(self, losses, metrics, extras, epoch):
         """
@@ -71,3 +77,102 @@ def Compose(callbacks):
                 isEnd = isEnd or callback.on_train_start(epochs)
             return isEnd
     return NewCallback()
+
+
+class Recorder(Callback):
+
+    def __init__(self):
+        self.best_model = None
+        self.best_score = float('inf')
+        self.summaries = []
+        self.others = []
+        self.prevs = []
+        # to monitor if the learner was stopped in between of an epoch
+        self.epoch_started = False
+
+    def on_train_start(self, epochs):
+        self.new_state()
+
+    def new_state(self):
+        sd = self.state_dict()
+        del sd['prevs']
+        self.prevs.append(self.state_dict())
+        self.summaries = []
+        self.others = []
+
+    def on_epoch_start(self, epoch):
+        if self.epoch_started:
+            self.new_state()
+        self.summaries.append({})
+        self.others.append({'train_losses': [], 'train_metrics': []})
+        self.epoch_started = True
+
+    def on_batch_end(self, train_loss, train_metrics, extras, epoch, batch):
+        self.others[epoch]['train_losses'].append(train_loss)
+        self.others[epoch]['train_metrics'].append(train_metrics)
+
+    @property
+    def last_summary(self):
+        if self.summaries:
+            return self.summaries[-1]
+        raise Exception('no summaries exists')
+
+    def on_epoch_end(self, losses, metrics, extras, epoch):
+        self.summaries[epoch]['train_loss'] = losses['train']
+        self.summaries[epoch]['train_metrics'] = metrics['train']
+        self.summaries[epoch]['time'] = extras['time']
+        representative_loss = 'train'  # for best model udpate
+
+        if 'val' in losses:
+            representative_loss = 'val'
+            self.summaries[epoch]['val_loss'] = losses['val']
+
+        if 'val' in metrics:
+            self.summaries[epoch]['val_metrics'] = metrics['val']
+
+        if losses[representative_loss] < self.best_score:
+            self.best_score = losses[representative_loss]
+            self.best_model = extras['model']
+        self.epoch_started = False
+
+    def state_dict(self):
+        state = {}
+        state['best_score'] = self.best_score
+        state['best_model'] = self.best_model
+        state['summaries'] = self.summaries
+        state['others'] = self.others
+        state['prevs'] = self.prevs
+        return deepcopy(state)
+
+    def load_state_dict(self, state):
+        self.best_score = state['best_score']
+        self.best_model = state['best_model']
+        self.summaries = state['summaries']
+        self.others = state['others']
+        self.prevs = state['prevs']
+
+
+class BoardLog(Callback):
+    def __init__(self, comment='learn', path='runs'):
+        self.path = path
+        self.run = 0
+        self.comment = comment
+        self.batch_count = 0
+
+    def on_train_start(self, epochs):
+        path = os.path.join(self.path, self.comment,
+                            datetime.now().strftime("%d_%b_%H:%M"))
+
+        self.writer = SummaryWriter(log_dir=path, flush_secs=30)
+        self.run += 1
+
+    def on_batch_end(self, loss, metrics, extras, epoch, batch):
+        self.writer.add_scalars(
+            'batch', {'loss': loss, **metrics}, global_step=self.batch_count)
+        self.batch_count += 1
+
+    def on_epoch_end(self, losses, metrics, extras, epoch):
+        self.writer.add_scalars('losses', losses, global_step=epoch)
+        for metric in metrics['train']:
+            self.writer.add_scalars(metric, {'val': metrics['val'][metric],
+                                             'train': metrics['train'][metric]}, global_step=epoch)

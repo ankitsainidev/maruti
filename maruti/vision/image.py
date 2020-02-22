@@ -175,18 +175,25 @@ def detect_sized_rescaled_face(img, size, rescale_factor=1.3, brightness_values=
     return resized_face
 
 
-def make_grid(imgs: '(n,h,w,c) tensor or list of (h,w,c) tensor', cols=4):
+def _unNormalize(img, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
+    mt = torch.FloatTensor(mean).view(3, 1, 1)
+    st = torch.FloatTensor(std).view(3, 1, 1)
+    return (((img * st) + mt) * 255).int().numpy().astype(np.uint8)
+
+
+def make_grid(imgs: '(n,h,w,c) tensor or list of (h,w,c) tensor', cols=8):
     "return numpy array of size (h,w,c) easy for plotting"
     count = len(imgs)
     rows = (count + cols - 1) // cols
-
+    if not (imgs[0] > 200).any():
+        imgs = [_unNormalize(img) for img in imgs]
     h, w = imgs[0].shape[:-1]
     new_img_w = h * cols
     new_img_h = w * rows
     new_img = Image.new('RGB', (new_img_w, new_img_h))
 
     for i in range(len(imgs)):
-        img = Image.fromarray(imgs[i])
+        img = Image.fromarray(np.array(imgs[i]).astype(np.uint8))
         x = h * (i % cols)
         y = h * (i // cols)
         new_img.paste(img, (x, y))

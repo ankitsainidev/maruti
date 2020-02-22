@@ -53,24 +53,81 @@ def crop_face(img, points, size: "(h,w)" = None):
     return face
 
 
+def bbox_from_det(det_list):
+    working_det = np.array([[0, 0,
+                             224, 224]])
+    bbox = []
+    for detection in det_list:
+        if detection is None:
+            bbox.append(working_det.astype(int) * 2)
+        else:
+            bbox.append(detection.astype(int) * 2)
+            working_det = detection.copy()
+    return bbox
+
+
+def get_face_frames2(path, start, end, jumps=4, margin=30, mtcnn=None, size: "(h,w)" = (224, 224)):
+    cap = cv2.VideoCapture(path)
+    f_h, f_w = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(
+        cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    cap.release()
+    #
+    frame_idx = list(range(start, end))
+    detect_idx = list(range(start, end, jumps))
+    n_h, n_w = f_h // 2, f_w // 2
+    if mtcnn is None:
+        mtcnn = MTCNN(select_largest=False, device=device,)
+
+    frames = list(get_frames_from_path(path, frame_idx))
+    small_faces = [cv2.resize(frame, (n_w, n_h))
+                   for i, frame in enumerate(frames) if i in detect_idx]
+    det, conf = mtcnn.detect(small_faces)
+    full_det_list = [None] * len(frame_idx)
+    det_list = list(map(lambda x: x, det))
+
+    for i, box in zip(detect_idx, det_list):
+        full_det_list[i] = box
+    bbox = bbox_from_det(full_det_list)
+    working_pred = np.array([(f_h // 2) - 112, (f_w // 2) - 112,
+                             (f_h // 2) + 112, (f_h // 2) + 112])
+    faces = []
+    for frame, box in zip(frames, bbox):
+        best_pred = box[0]
+        best_pred[[0, 1]] -= margin // 2
+        best_pred[[2, 3]] += (margin + 1) // 2
+        try:
+            cropped_faces = crop_face(frame, best_pred, size=size)
+            working_pred = best_pred
+        except:
+            cropped_faces = crop_face(frame, working_pred, size=size)
+        faces.append(cropped_faces)
+
+    return faces
+
+
 def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224, 224),):
     """
     Consumes more RAM as it stores all the frames in full resolution.
     Try to detect in small batches if needed.
     """
-    cap = cv2.VideoCapture(path)  # for height and width
+    # for height and width
+    cap = cv2.VideoCapture(path)
     f_h, f_w = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(
         cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    cap.release()
+    #
+
     n_h, n_w = f_h // 2, f_w // 2
     if mtcnn is None:
-        mtcnn = MTCNN(select_largest=False, device=device)
+        mtcnn = MTCNN(select_largest=False, device=device,)
 
     frames = list(get_frames_from_path(path, frame_idx))
     small_faces = [cv2.resize(frame, (n_w, n_h)) for frame in frames]
     det, conf = mtcnn.detect(small_faces)
-    bbox = list(map(lambda x: x.astype(int) * 2, det))
-    working_pred = np.array(
-        [(f_h // 2) - 112, (f_w // 2) - 112, (f_h // 2) + 112, (f_h // 2) + 112])
+    det_list = list(map(lambda x: x, det))
+    bbox = bbox_from_det(det_list)
+    working_pred = np.array([(f_h // 2) - 112, (f_w // 2) - 112,
+                             (f_h // 2) + 112, (f_h // 2) + 112])
     faces = []
     for frame, box in zip(frames, bbox):
         best_pred = box[0]
