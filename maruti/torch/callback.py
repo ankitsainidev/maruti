@@ -1,5 +1,5 @@
-from datetime import datetime
 import os
+from datetime import datetime, timezone, timedelta
 from torch.utils.tensorboard import SummaryWriter
 from copy import deepcopy
 
@@ -160,8 +160,9 @@ class BoardLog(Callback):
         self.batch_count = 0
 
     def on_train_start(self, epochs):
-        path = os.path.join(self.path, self.comment,
-                            datetime.now().strftime("%d_%b_%H:%M"))
+        india_timezone = timezone(timedelta(hours=5.5))
+        time_str = datetime.now(tz=india_timezone).strftime('%d_%b_%H:%M:%S')
+        path = os.path.join(self.path, self.comment, time_str)
 
         self.writer = SummaryWriter(log_dir=path, flush_secs=30)
         self.run += 1
