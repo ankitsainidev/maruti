@@ -176,8 +176,8 @@ def detect_sized_rescaled_face(img, size, rescale_factor=1.3, brightness_values=
 
 
 def _unNormalize(img, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]):
-    mt = torch.FloatTensor(mean).view(3, 1, 1)
-    st = torch.FloatTensor(std).view(3, 1, 1)
+    mt = torch.FloatTensor(mean).view(1, 1, 3)
+    st = torch.FloatTensor(std).view(1, 1, 3)
     return (((img * st) + mt) * 255).int().numpy().astype(np.uint8)
 
 
