@@ -185,7 +185,7 @@ def make_grid(imgs: '(n,h,w,c) tensor or list of (h,w,c) tensor', cols=8):
     "return numpy array of size (h,w,c) easy for plotting"
     count = len(imgs)
     rows = (count + cols - 1) // cols
-    if not (imgs[0] > 200).any():
+    if not (imgs[0] > 5).any():
         imgs = [_unNormalize(img) for img in imgs]
     h, w = imgs[0].shape[:-1]
     new_img_w = h * cols
