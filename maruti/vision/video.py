@@ -31,7 +31,7 @@ def get_frames(cap: 'cv2.VideoCapture object', frames: 'iterable<int>', code='rg
         if i in frames:
             _, frame = cap.retrieve()
             if code == 'rgb':
-                yield np.ascontiguousarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                yield cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             else:
                 yield frame
             if i == last_frame:
@@ -109,7 +109,6 @@ def non_overlapping_ranges(rngs):
     last = min_i
     start = min_i
     i = min_i + 1
-    print(all_idx)
     while i < max_i + 1:
         if i in all_idx:
             last = i
