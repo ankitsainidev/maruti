@@ -29,7 +29,7 @@ def accuracy_multi_np(preds, targs, thresh):
 
 def baccuracy(preds, targs, thresh=0.5):
     preds = (preds > thresh).int()
-    return (preds == targs).int().sum()
+    return (preds == targs).int().mean()
 
 
 def bprecision(preds, targs, thresh=0.5, epsilon=1e-8):
