@@ -67,7 +67,7 @@ def bbox_from_det(det_list):
     return bbox
 
 
-def _face_from_frames(frame_idx, detect_idx, frames, f_h, f_w, margin=30, size=size, mtcnn=None):
+def _face_from_frames(frame_idx, detect_idx, frames, f_h, f_w, margin=30, size=(224, 224), mtcnn=None):
     start = frame_idx[0]
     n_h, n_w = f_h // 2, f_w // 2
     if mtcnn is None:
