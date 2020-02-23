@@ -74,7 +74,8 @@ def _face_from_frames(frame_idx, detect_idx, frames, f_h, f_w, margin=30, size=(
         mtcnn = MTCNN(select_largest=False, device=device,)
     small_faces = [cv2.resize(frame, (n_w, n_h))
                    for i, frame in enumerate(frames) if i + start in detect_idx]
-    breakpoint()
+    import pdb
+    pdb.set_trace()
     det, conf = mtcnn.detect(small_faces)
     full_det_list = [None] * len(frame_idx)
     det_list = list(map(lambda x: x, det))
@@ -148,7 +149,8 @@ def get_face_frames2(path, frame_rngs, jumps=4, margin=30, mtcnn=None, size: "(h
         idx2frame[i] = frame
 
     # detection
-    breakpoint()
+    import pdb
+    pdb.set_trace()
     for frame_rng in non_overlapping_rngs:
         start, end = frame_rng
         frame_idx = list(range(start, end))
