@@ -46,7 +46,8 @@ def get_frames_from_path(path: 'str or posix', frames: 'iterable<int>', code='rg
 
 
 def crop_face(img, points, size: "(h,w)" = None):
-    size = size[1], size[0]  # cv2 resize needs (w,h)
+    if size:
+        size = size[1], size[0]  # cv2 resize needs (w,h)
     face = img[points[1]:points[3],
                points[0]:points[2]]
     if size is not None:
@@ -78,11 +79,18 @@ def _face_from_frames(frame_idx, detect_idx, frames, f_h, f_w, margin=30, size=(
     full_det_list = [None] * len(frame_idx)
     det_list = list(map(lambda x: x, det))
 
+    # first frame should be correct so it can compunsate upcomings
+    if det_list[0] is None:
+        _detection = mtcnn.detect(frames[0])[0]
+        if _detection is not None:
+            det_list[0] = _detection / 2
+    #
+
     for i, box in zip(detect_idx, det_list):
         full_det_list[i - start] = box
     bbox = bbox_from_det(full_det_list)
     working_pred = np.array([(f_h // 2) - 112, (f_w // 2) - 112,
-                             (f_h // 2) + 112, (f_h // 2) + 112])
+                             (f_h // 2) + 112, (f_w // 2) + 112])
     faces = []
     for frame, box in zip(frames, bbox):
         best_pred = box[0]
