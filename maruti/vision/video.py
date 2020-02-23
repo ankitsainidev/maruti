@@ -80,7 +80,7 @@ def get_face_frames2(path, start, end, jumps=4, margin=30, mtcnn=None, size: "(h
 
     frames = list(get_frames_from_path(path, frame_idx))
     small_faces = [cv2.resize(frame, (n_w, n_h))
-                   for i, frame in enumerate(frames) if i in detect_idx]
+                   for i, frame in enumerate(frames) if i + start in detect_idx]
     det, conf = mtcnn.detect(small_faces)
     full_det_list = [None] * len(frame_idx)
     det_list = list(map(lambda x: x, det))
