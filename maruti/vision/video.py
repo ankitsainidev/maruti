@@ -163,6 +163,7 @@ def get_face_frames2(path, frame_rngs, jumps=4, margin=30, mtcnn=None, size: "(h
         curr_rng_faces = []
         for i in range(rng[0], rng[1]):
             curr_rng_faces.append(idx2face[i])
+        rng_faces.append(curr_rng_faces)
     return rng_faces
 
 
