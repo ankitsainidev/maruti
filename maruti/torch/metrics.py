@@ -1,8 +1,9 @@
 import torch
 import numpy as np
-## "SHAMELESSLY STOLEN" applies here. All credit is to fast ai team.
+# "SHAMELESSLY STOLEN" applies here. All credit is to fast ai team.
 # It is just copy and paste from their github repo.
 # Please check them out at fast.ai
+
 
 def accuracy(preds, targs):
     preds = torch.max(preds, dim=1)[1]
@@ -24,6 +25,29 @@ def accuracy_multi(preds, targs, thresh):
 
 def accuracy_multi_np(preds, targs, thresh):
     return ((preds > thresh) == targs).mean()
+
+
+def baccuracy(preds, targs, thresh=0.5):
+    preds = (preds > thresh).int()
+    return (preds == targs).int().sum()
+
+
+def bprecision(preds, targs, thresh=0.5, epsilon=1e-8):
+    preds = (preds > thresh).int()
+    tp = (targs == preds) * targs
+    return tp.sum() / (preds.sum() + epsilon)
+
+
+def brecall(preds, targs, thresh=0.5, epsilon=1e-8):
+    preds = (preds > thresh).int()
+    tp = (targs == preds) * targs
+    return tp.sum() / (targs.sum() + epsilon)
+
+
+def bf1(preds, targs, thresh=0.5, epsilon=1e-8):
+    rec = brecall(preds, targs, thresh, epsilon)
+    pre = bprecision(preds, targs, thresh, epsilon)
+    return 2 * (pre * rec) / (pre + rec + epsilon)
 
 
 def recall(log_preds, targs, thresh=0.5, epsilon=1e-8):
