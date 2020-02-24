@@ -68,16 +68,10 @@ def bbox_from_det(det_list):
     return bbox
 
 
-def _face_from_frames(frame_idx, detect_idx, frames, f_h, f_w, margin=30, size=(224, 224), mtcnn=None):
+def _face_from_det(frame_idx, detect_idx, frames, det_list,  f_h, f_w, margin=30, size=(224, 224), mtcnn=None):
     start = frame_idx[0]
     n_h, n_w = f_h // 2, f_w // 2
-    if mtcnn is None:
-        mtcnn = MTCNN(select_largest=False, device=device,)
-    small_faces = [cv2.resize(frame, (n_w, n_h))
-                   for i, frame in enumerate(frames) if i + start in detect_idx]
-    det, conf = mtcnn.detect(small_faces)
     full_det_list = [None] * len(frame_idx)
-    det_list = list(map(lambda x: x, det))
 
     # first frame should be correct so it can compunsate upcomings
     if det_list[0] is None:
@@ -137,6 +131,7 @@ def get_face_frames2(path, frame_rngs, jumps=4, margin=30, mtcnn=None, size: "(h
     cap = cv2.VideoCapture(path)
     f_h, f_w = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(
         cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    n_h, n_w = f_h // 2, f_w // 2
     cap.release()
     #
     non_overlapping_rngs = non_overlapping_ranges(frame_rngs)
@@ -153,18 +148,30 @@ def get_face_frames2(path, frame_rngs, jumps=4, margin=30, mtcnn=None, size: "(h
     for i, frame in zip(all_frames_idx, vid_frames):
         idx2frame[i] = frame
 
-    # detection
+    # getting detection in one shot
+    all_detect_idx = []
+    for frame_rng in non_overlapping_rngs:
+        all_detect_idx.extend(range(frame_rng[0], frame_rng[1], jumps))
+    all_detect_small_frames = [cv2.resize(frame, (n_w, n_h)) for i, frame in zip(
+        all_frames_idx, vid_frames) if i in all_detect_idx]
+    det, conf = mtcnn.detect(all_detect_small_frames)
+    idx2det = defaultdict(lambda: None)
+    for i, det in zip(all_detect_idx, det):
+        idx2det[i] = det
+
+    # face crop for each non-overlapping range
     for frame_rng in non_overlapping_rngs:
         start, end = frame_rng
         frame_idx = list(range(start, end))
         detect_idx = list(range(start, end, jumps))
         frames = [idx2frame[i] for i in frame_idx]
-        faces = _face_from_frames(
-            frame_idx, detect_idx, frames, f_h, f_w, margin=margin, size=size, mtcnn=mtcnn)
+        det_list = [idx2det[i] for i in detect_idx]
+        faces = _face_from_det(
+            frame_idx, detect_idx, frames, det_list, f_h, f_w, margin=margin, size=size, mtcnn=mtcnn)
         for i, face in zip(frame_idx, faces):
             idx2face[i] = face
 
-    # rearrangement
+    # distribution to each range
     rng_faces = []
     for rng in frame_rngs:
         curr_rng_faces = []
