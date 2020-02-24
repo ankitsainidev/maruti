@@ -168,8 +168,11 @@ class BoardLog(Callback):
         self.run += 1
 
     def on_batch_end(self, loss, metrics, extras, epoch, batch):
+        lr_vals = {}
+        for i, param in enumerate(extras['optimizer'].param_groups):
+            lr_vals['lr_' + str(i)] = param['lr']
         self.writer.add_scalars(
-            'batch', {'loss': loss, **metrics}, global_step=self.batch_count)
+            'batch', {'loss': loss, **metrics, **lr_vals}, global_step=self.batch_count)
         self.batch_count += 1
 
     def on_epoch_end(self, losses, metrics, extras, epoch):

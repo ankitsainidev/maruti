@@ -238,7 +238,11 @@ class Learner:
                         self.lr_scheduler.step()
                     self.optimizer.zero_grad()
 
-                if self.cb.on_batch_end(loss.item(), batch_metrics, {}, epoch, i):
+                batch_extras = {'optimizer': self.optimizer, }
+                if hasattr(self, 'lr_scheduler'):
+                    batch_extras['lr_scheduler'] = self.lr_scheduler
+
+                if self.cb.on_batch_end(loss.item(), batch_metrics, batch_extras, epoch, i):
                     return
 
             epoch_predictions = torch.cat(epoch_predictions)
@@ -262,7 +266,11 @@ class Learner:
                 torch.save(self.state_dict(), save_on_epoch)
 
             epoch_extra_dict = {'time': time.perf_counter() - start_time,
-                                'model': self.model.state_dict()}
+                                'model': self.model.state_dict(),
+                                'optimizer': self.optimizer,
+                                }
+            if hasattr(self, 'lr_scheduler'):
+                epoch_extra_dict['lr_scheduler'] = self.lr_scheduler
             if self.cb.on_epoch_end(losses, metrics, epoch_extra_dict, epoch):
                 return
             # this should after the epoch_end callback to be ready
@@ -273,6 +281,7 @@ class Learner:
         self.model.eval()
         prediction_ar = []
         target_ar = []
+
         with torch.no_grad():
             if with_targets:
                 for inputs, targets in tqdm_nl(data_loader, desc='Predicting: '):
@@ -282,6 +291,7 @@ class Learner:
                     prediction_ar.append(pred)
                     target_ar.append(targets)
                 return torch.cat(prediction_ar), torch.cat(target_ar)
+
             for inputs in tqdm_nl(data_loader, desc='Predicting: '):
                 inputs = inputs.to(self.device)
                 pred = self.model(inputs)
