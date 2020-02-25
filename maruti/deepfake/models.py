@@ -1,8 +1,9 @@
 import torch.nn as nn
 import torchvision
 from ..torch.utils import freeze
-from torch.nn.utils.rnn import PackedSequence
+from torch.nn.utils.rnn import PackedSequence, pack_sequence
 import itertools
+from .dataset import group_transform
 
 
 def resnext50(feature=False, pretrained=False):
@@ -93,3 +94,37 @@ class ResLSTM(nn.Module):
                                    self.classifier.parameters())
         else:
             print('there are only 4 param groups -> 0,1,2,3')
+
+
+class ReslstmNN(nn.Module):
+    def __init__(self, num_sets=6, pretrained=False, hidden_size=512, num_layers=1, bidirectional=True, dropout=0.5):
+        super().__init__()
+        self.feature = ResLSTM(pretrained=pretrained, hidden_size=hidden_size,
+                               num_layers=num_layers, bidirectional=bidirectional, dropout=dropout)
+        self.feature.classifier[9] = nn.Identity()
+        self.feature.classifier[10] = nn.Identity()
+        self.classifier = binaryClassifier(128 * num_sets)
+
+    def forward(x):
+        preds = []
+        for vid_set in x:
+            preds.append(self.feature(vid_set))
+        preds = torch.cat(preds, dim=1)
+        preds = self.classifier(preds)
+        return preds.squeeze(dim=1)
+
+    @staticmethod
+    def transform(vid_sets):
+        transformed = []
+        for vid in vid_sets:
+            transformed.append(group_transform(vid))
+        return transformed
+
+    @staticmethod
+    def collate(batches):
+        ps_list = []
+        for set_idx in range(len(batches[0][0])):
+            vids = [batch[set_idx] for batch, target in batches]
+            ps = pack_sequence(vids, False)
+            ps_list.append(ps)
+        return ps, torch.tensor([target for _, target in batches])
