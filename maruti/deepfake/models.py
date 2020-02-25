@@ -14,19 +14,39 @@ def resnext50(feature=False, pretrained=False):
     return model
 
 
+def binaryClassifier(input_features):
+    return nn.Sequential(
+        nn.Linear(input_features, input_features // 2),
+        nn.ReLU(),
+        nn.BatchNorm1d(input_features // 2),
+
+        nn.Linear(input_features // 2, input_features // 2),
+        nn.ReLU(),
+        nn.BatchNorm1d(input_features // 2),
+
+        nn.Linear(input_features // 2, 128),
+        nn.ReLU(),
+        nn.Dropout(),
+
+        nn.Linear(128, 1),
+        nn.Flatten())
+
+
 class ResLSTM(nn.Module):
 
-    def __init__(self, hidden_size=128, bidirectional=False):
+    def __init__(self, pretrained=False, hidden_size=512, num_layers=1, bidirectional=True, dropout=0.5):
         super().__init__()
         # resnext
-        self.feature_model = resnext50(True)
+        self.feature_model = resnext50(True, pretrained)
 
         # lstm
         self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(2048, self.hidden_size,
-                            bidirectional=bidirectional)
-        self.classifier = nn.Linear(
-            self.hidden_size + int(bidirectional) * self.hidden_size, 1)
+        self.lstm = nn.LSTM(2048, hidden_size=hidden_size, num_layers=num_layers,
+                            bidirectional=bidirectional, dropout=dropout)
+        classifier_features = hidden_size * num_layers
+        if bidirectional:
+            classifier_features *= 2
+        self.classifier = binaryClassifier(classifier_features)
 
     def forward(self, x):
         # indices
