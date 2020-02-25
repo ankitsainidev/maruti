@@ -16,15 +16,17 @@ def resnext50(feature=False, pretrained=False):
 
 class ResLSTM(nn.Module):
 
-    def __init__(self, hidden_size=128):
+    def __init__(self, hidden_size=128, bidirectional=False):
         super().__init__()
         # resnext
         self.feature_model = resnext50(True)
 
         # lstm
         self.hidden_size = hidden_size
-        self.lstm = nn.LSTM(2048, self.hidden_size, bidirectional=False)
-        self.classifier = nn.Linear(self.hidden_size, 1)
+        self.lstm = nn.LSTM(2048, self.hidden_size,
+                            bidirectional=bidirectional)
+        self.classifier = nn.Linear(
+            self.hidden_size + int(bidirectional) * self.hidden_size, 1)
 
     def forward(self, x):
         # indices
