@@ -194,9 +194,11 @@ class Learner:
             metric_vals[metric.__name__] = metric(ypred, y).item()
         return metric_vals
 
-    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth'):
+    def fit(self, epochs, train_loader, val_loader=None, accumulation_steps=1, save_on_epoch='learn.pth', n_batch_val=-1):
         # TODO: test for model on same device
         # Save_on_epoch = None or False to stop save, else path to save
+        if n_batch_val == -1:
+            n_batch_val = len(train_loader)
         self.call_count += 1
 
         print(self.header_str)
@@ -244,6 +246,15 @@ class Learner:
 
                 if self.cb.on_batch_end(loss.item(), batch_metrics, batch_extras, epoch, i):
                     return
+                if val_loader is not None:
+                    if (i + 1) % n_batch_val == 0:
+                        if self.cb.on_min_val_start(epoch, i):
+                            return
+                        min_val_loss, min_val_metrics = self._validate(
+                            val_loader)
+                        min_val_extras = {'model': self.model}
+                        if self.cb.on_min_val_end(min_val_loss, min_val_metrics, min_val_extras, epoch, i):
+                            return
 
             epoch_predictions = torch.cat(epoch_predictions)
             epoch_targets = torch.cat(epoch_targets)

@@ -26,6 +26,13 @@ class Callback:
     def on_validation_end(self, loss, metrics, epoch):
         pass
 
+    def on_min_val_start(self, epoch, batch):
+        pass
+
+    def on_min_val_end(self, loss, metrics,extras, epoch, batch):
+        """extras['model']"""
+        pass
+
     def on_train_start(self, epoch):
         pass
 
@@ -69,6 +76,20 @@ def Compose(callbacks):
             for callback in callbacks:
                 isEnd = isEnd or callback.on_validation_end(
                     loss, metrics, epoch)
+            return isEnd
+
+        def on_min_val_start(self, epoch, batch):
+            isEnd = False
+            for callback in callbacks:
+                isEnd = isEnd or callback.on_min_val_start(
+                    epoch, batch)
+            return isEnd
+
+        def on_min_val_end(self, loss, metrics, extras, epoch, batch):
+            isEnd = False
+            for callback in callbacks:
+                isEnd = isEnd or callback.on_min_val_end(
+                    loss, metrics, extras, epoch, batch)
             return isEnd
 
         def on_train_start(self, epochs):
@@ -116,7 +137,10 @@ class Recorder(Callback):
         if self.summaries:
             return self.summaries[-1]
         raise Exception('no summaries exists')
-
+    def on_min_val_end(self, loss, metrics, extras, epoch, batch):
+        if loss < self.best_score:
+            self.best_score = loss
+            self.best_model = extras['model'].state_dict()
     def on_epoch_end(self, losses, metrics, extras, epoch):
         self.summaries[epoch]['train_loss'] = losses['train']
         self.summaries[epoch]['train_metrics'] = metrics['train']
@@ -174,6 +198,9 @@ class BoardLog(Callback):
         self.writer.add_scalars(
             'batch', {'loss': loss, **metrics, **lr_vals}, global_step=self.batch_count)
         self.batch_count += 1
+    def on_min_val_end(self, loss, metrics,extras, epoch, batch):
+        self.writer.add_scalars(
+            'min_val',{'loss': loss, **metrics}, global_step = self.batch_count)
 
     def on_epoch_end(self, losses, metrics, extras, epoch):
         self.writer.add_scalars('losses', losses, global_step=epoch)
