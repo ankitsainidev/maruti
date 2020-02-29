@@ -7,6 +7,7 @@ import torchvision
 import maruti.torch as mtorch
 import maruti.deepfake.dataset as mdata
 import maruti
+import maruti.deepfake as mfake
 import numpy as np
 import cv2
 import maruti.vision as mvis
@@ -16,5 +17,5 @@ import matplotlib.pyplot as plt
 from torch.utils import data
 import torch.optim as optim
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-__all__ = gen_all + ['mvis','cv2', 'mdata', 'tdata', 'pd', 'device', 'plt', 'np', 'torch', 'nn', 'torch_transforms',
+__all__ = gen_all + ['mfake','mvis', 'cv2', 'mdata', 'tdata', 'pd', 'device', 'plt', 'np', 'torch', 'nn', 'torch_transforms',
                      'torchvision', 'mtorch', 'maruti', 'data', 'optim']
