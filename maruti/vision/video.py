@@ -212,7 +212,7 @@ def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224
     det_list = list(map(lambda x: x, det))
     bbox = bbox_from_det(det_list)
     working_pred = np.array([(f_h // 2) - 112, (f_w // 2) - 112,
-                             (f_h // 2) + 112, (f_h // 2) + 112])
+                             (f_h // 2) + 112, (f_w // 2) + 112])
     faces = []
     for frame, box in zip(frames, bbox):
         best_pred = box[0]
@@ -247,7 +247,7 @@ def get_faces_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (22
     det_list = list(map(lambda x: x, det))
     bbox = bbox_from_det(det_list)
     working_pred = np.array([(f_h // 2) - 112, (f_w // 2) - 112,
-                             (f_h // 2) + 112, (f_h // 2) + 112])
+                             (f_h // 2) + 112, (f_w // 2) + 112])
     faces = []
     for frame, box in zip(frames, bbox):
         all_faces = []
