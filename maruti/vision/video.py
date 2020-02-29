@@ -245,6 +245,10 @@ def get_faces_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (22
     small_faces = [cv2.resize(frame, (n_w, n_h)) for frame in frames]
     det, conf = mtcnn.detect(small_faces)
     det_list = list(map(lambda x: x, det))
+    if det_list[0] is None:
+        _detection = mtcnn.detect(frames[0])[0]
+        if _detection is not None:
+            det_list[0] = _detection / 2
     bbox = bbox_from_det(det_list)
     working_pred = np.array([(f_h // 2) - 112, (f_w // 2) - 112,
                              (f_h // 2) + 112, (f_w // 2) + 112])
