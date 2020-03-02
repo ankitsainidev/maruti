@@ -247,7 +247,10 @@ class Learner:
                 if self.cb.on_batch_end(loss.item(), batch_metrics, batch_extras, epoch, i):
                     return
                 if val_loader is not None:
+
                     if (i + 1) % n_batch_val == 0:
+                        del inputs
+                        del targets
                         if self.cb.on_min_val_start(epoch, i):
                             return
                         min_val_loss, min_val_metrics = self._validate(
@@ -255,6 +258,7 @@ class Learner:
                         min_val_extras = {'model': self.model}
                         if self.cb.on_min_val_end(min_val_loss, min_val_metrics, min_val_extras, epoch, i):
                             return
+                        self.model.train()
 
             epoch_predictions = torch.cat(epoch_predictions)
             epoch_targets = torch.cat(epoch_targets)
