@@ -1,4 +1,8 @@
 include README.md
+<<<<<<< HEAD
 include maruti/deepfake/data/*/*
+=======
+include maruti/data/*/*
+>>>>>>> master
 include maruti/vision/data/*/*
 include test_data/*

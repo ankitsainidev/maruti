@@ -13,9 +13,15 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/ankitsainidev/maruti",
     download_url='https://github.com/ankitsainidev/maruti/archive/v1.3.tar.gz',
+<<<<<<< HEAD
     packages=['maruti', 'maruti.vision', 'maruti.deepfake','maruti.torch','maruti.imports'],
     package_dir={'maruti': 'maruti'},
     package_data={'maruti': ['deepfake/data/*/*', 'vision/data/*/*']},
+=======
+    packages=['maruti', 'maruti.vision', 'maruti.deepfake'],
+    package_dir={'maruti': 'maruti'},
+    package_data={'maruti': ['data/*/*', 'vision/data/*/*']},
+>>>>>>> master
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
