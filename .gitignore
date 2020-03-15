@@ -4,3 +4,6 @@
 /*.egg
 /dist/
 /build/
+/sampletest.py
+/sampletest.ipynb
+/.ipynb_checkpoints/*
