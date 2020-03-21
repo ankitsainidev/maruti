@@ -1,9 +1,10 @@
 import pathlib
 from warnings import warn
 import subprocess
-
+import maruti
 import os
 from os.path import join
+from PIL import Image
 import torch
 import shlex
 import time
@@ -19,7 +20,7 @@ from torchvision import transforms as torch_transforms
 from torch.utils.data import Dataset
 from ..torch.utils import def_norm as normalize
 DATA_PATH = join(os.path.dirname(__file__), 'data/')
-__all__ = ['split_videos', 'VideoDataset','transform','group_transform']
+__all__ = ['split_videos', 'VideoDataset', 'transform', 'group_transform']
 
 transform = {
     'train': torch_transforms.Compose(
@@ -41,6 +42,94 @@ group_transform = {
     'train': lambda x: torch.stack(list(map(transform['train'], x))),
     'val': lambda x: torch.stack(list(map(transform['val'], x)))
 }
+
+
+class ImageReader:
+
+    def __init__(self, path, metadata, is_path_cache=False, vb=True, ignore_frame_errors=True):
+        self.vid2part = {}
+        self.meta = metadata
+        self.ignore_frame_errors = ignore_frame_errors
+
+        if not is_path_cache:
+            parts = os.listdir(path)
+            assert len(parts) > 0, 'no files found'
+            start = time.perf_counter()
+
+            for part in parts:
+                path_to_part = os.path.join(path, part)
+                imgs = os.listdir(path_to_part)
+
+                for img in imgs:
+                    self.vid2part[self.vid_name(img)] = path_to_part
+
+            end = time.perf_counter()
+            if vb:
+                print('Total time taken:', (end - start) / 60, 'mins')
+
+        else:
+            self.vid2part = maruti.read_json(path)
+
+    def is_real(self, vid):
+        return self.meta[vid]['label'] == 'REAL'
+
+    def is_fake(self, vid):
+        return not self.is_real(vid)
+
+    def is_error(self, vid):
+        return 'error' in self.meta[vid]
+
+    def vid_name(self, img_name):
+        name = img_name.split('_')[0]
+        return name + '.mp4'
+
+    def create_name(self, vid, frame, person):
+        return f'{vid[:-4]}_{frame}_{person}.jpg'
+
+    def total_persons(self, vid):
+        if self.is_real(vid):
+            return self.meta[vid]['pc']
+
+        orig_vid = self.meta[vid]['original']
+        return self.meta[orig_vid]['pc']
+
+    def random_person(self, vid, frame):
+        person = random.choice(range(self.total_persons(vid)))
+        return self.get_image(vid, frame, person)
+
+    def random_img(self, vid):
+        frame = random.choice(range(self.total_frames(vid)))
+        person = random.choice(range(self.total_persons(vid)))
+        return self.get_image(vid, frame, person)
+
+    def sample(self):
+        vid = random.choice(list(self.vid2part))
+        while self.is_error(vid):
+            vid = random.choice(list(self.vid2part))
+        frame = random.choice(range(self.total_frames(vid)))
+        person = random.choice(range(self.total_persons(vid)))
+        return self.get_image(vid, frame, person)
+
+    def total_frames(self, vid):
+        return self.meta[vid]['fc'] - 1
+
+    def create_absolute(self, name):
+        path = os.path.join(self.vid2part[self.vid_name(name)], name)
+        return path
+
+    def get_image(self, vid, frame, person):
+        if self.total_persons(vid) <= person:
+            raise Exception('Not Enough Persons')
+
+        if self.total_frames(vid) <= frame:
+            if self.ignore_frame_error:
+                frame = self.total_frames(vid) - 1
+            else:
+                raise Exception('Not Enough Frames')
+
+        img = self.create_name(vid, frame, person)
+        path = self.create_absolute(img)
+        return Image.open(path)
 
 
 def split_videos(meta_file):
