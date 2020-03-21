@@ -46,7 +46,7 @@ group_transform = {
 
 class ImageReader:
 
-    def __init__(self, path, metadata, is_path_cache=False, vb=True, ignore_frame_errors=True):
+    def __init__(self, path, metadata, is_path_cache=False, vb=True, ignore_frame_errors=False):
         self.vid2part = {}
         self.meta = metadata
         self.ignore_frame_errors = ignore_frame_errors
@@ -122,7 +122,7 @@ class ImageReader:
             raise Exception('Not Enough Persons')
 
         if self.total_frames(vid) <= frame:
-            if self.ignore_frame_error:
+            if self.ignore_frame_errors:
                 frame = self.total_frames(vid) - 1
             else:
                 raise Exception('Not Enough Frames')

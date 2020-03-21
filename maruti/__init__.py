@@ -6,5 +6,5 @@ from . import kaggle
 from . import torch
 from .utils import *
 from .sizes import *
-from .deepfake import VideoDataset
+from .deepfake import ImageReader
 from .torch import Learner
