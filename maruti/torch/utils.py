@@ -199,7 +199,7 @@ class Learner:
         # TODO: test for model on same device
         # Save_on_epoch = None or False to stop save, else path to save
         min_validation_idx = set(np.linspace(
-            0, len(train_loader), min_validation_idx + 1, dtype=int)[1:])
+            0, len(train_loader), min_validations + 1, dtype=int)[1:])
 
         self.call_count += 1
 
