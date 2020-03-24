@@ -29,7 +29,7 @@ class Callback:
     def on_min_val_start(self, epoch, batch):
         pass
 
-    def on_min_val_end(self, loss, metrics,extras, epoch, batch):
+    def on_min_val_end(self, loss, metrics, extras, epoch, batch):
         """extras['model']"""
         pass
 
@@ -137,10 +137,12 @@ class Recorder(Callback):
         if self.summaries:
             return self.summaries[-1]
         raise Exception('no summaries exists')
+
     def on_min_val_end(self, loss, metrics, extras, epoch, batch):
         if loss < self.best_score:
             self.best_score = loss
-            self.best_model = extras['model'].state_dict()
+            self.best_model = deepcopy(extras['model'].state_dict())
+
     def on_epoch_end(self, losses, metrics, extras, epoch):
         self.summaries[epoch]['train_loss'] = losses['train']
         self.summaries[epoch]['train_metrics'] = metrics['train']
@@ -156,7 +158,7 @@ class Recorder(Callback):
 
         if losses[representative_loss] < self.best_score:
             self.best_score = losses[representative_loss]
-            self.best_model = extras['model']
+            self.best_model = deepcopy(extras['model'])
         self.epoch_started = False
 
     def state_dict(self):
@@ -198,9 +200,10 @@ class BoardLog(Callback):
         self.writer.add_scalars(
             'batch', {'loss': loss, **metrics, **lr_vals}, global_step=self.batch_count)
         self.batch_count += 1
-    def on_min_val_end(self, loss, metrics,extras, epoch, batch):
+
+    def on_min_val_end(self, loss, metrics, extras, epoch, batch):
         self.writer.add_scalars(
-            'min_val',{'loss': loss, **metrics}, global_step = self.batch_count)
+            'min_val', {'loss': loss, **metrics}, global_step=self.batch_count)
 
     def on_epoch_end(self, losses, metrics, extras, epoch):
         self.writer.add_scalars('losses', losses, global_step=epoch)
