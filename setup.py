@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="maruti",
-    version="1.3.2",
+    version="1.3.3",
     author="Ankit Saini",
     author_email="ankitsaini100205@gmail.com",
     description="Maruti Library",
@@ -16,7 +16,7 @@ setuptools.setup(
     packages=['maruti', 'maruti.vision', 'maruti.deepfake',
               'maruti.torch', 'maruti.imports'],
     package_dir={'maruti': 'maruti'},
-    package_data={'maruti': ['deepfake/data/*/*', 'vision/data/*/*']},
+    package_data={'maruti': ['deepfake/data/*/*']},
     include_package_data=True,
     classifiers=[
         "Programming Language :: Python :: 3",
