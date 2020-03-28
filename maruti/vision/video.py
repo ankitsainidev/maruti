@@ -194,22 +194,29 @@ def crop(frame, bb):
     return frame[bb[1]:bb[3], bb[0]:bb[2]]
 
 
+def toint(bb):
+    return [int(i) for i in bb]
+
+
+def apply_margin(bb, margin, size):
+    bb = [max(0,bb[0]-margin),max(0, bb[1] - margin),min(size[0] -1, bb[2]+margin),min(size[1]-1, bb[3]+margin)]
+    return bb
+
+
 def expand_detection(detections, idx, length):
     assert (len(detections) == len(
         idx)), f'length of detection ({len(detections)}) and indices ({len(idx)}) must be same'
 
     j = 0
     last = detections[j] if detections[j] is not None else []
-
     final_detections = []
 
     for i in range(length):
-        final_detections.append([])
         if i in idx:
             last = detections[idx.index(i)]
             if last is None:
                 last = []
-        final_detections[-1].append(last)
+        final_detections.append(last)
     return final_detections
 
 
@@ -229,17 +236,22 @@ def get_all_faces(path: 'str', detections=32, mtcnn=None, margin=20):
     detection_idx = list(map(int, np_det_idx))
     detection_frames = [frame for i, frame in enumerate(
         frames) if i in detection_idx]
-    detection = mtcnn.detect(detection_frames)[0]
+    detection = mtcnn.detect(detection_frames)
+
+    detection = detection[0]
     del detection_frames
     detection = expand_detection(detection, detection_idx, len(frames))
 
     faces = []
+
     for i, bboxes in enumerate(detection):
         faces.append([])
         for bbox in bboxes:
-            faces.append(crop(frames[i], bbox))
+            bbox = apply_margin(bbox, margin, frames[0].shape[:2])
+            faces[-1].append(crop(frames[i], toint(bbox)))
 
     return faces
+
 
 
 def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224, 224),):
