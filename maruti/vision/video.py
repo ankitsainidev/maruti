@@ -228,7 +228,7 @@ def get_all_faces(path: 'str', detections=32, mtcnn=None, margin=20):
     detection_idx = list(map(int, np_det_idx))
     detection_frames = [frame for i, frame in enumerate(
         frames) if i in detection_idx]
-    detection = mtcnn.detect(detection_frames)
+    detection = mtcnn.detect(detection_frames)[0]
     del detection_frames
     detection = expand_detection(detection, detection_idx, len(frames))
 
