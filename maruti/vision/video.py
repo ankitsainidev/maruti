@@ -210,6 +210,7 @@ def expand_detection(detections, idx, length):
             if last is None:
                 last = []
         final_detections[-1].append(last)
+    return final_detections
 
 
 def get_all_faces(path: 'str', detections=32, mtcnn=None, margin=20):
