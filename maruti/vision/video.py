@@ -190,6 +190,57 @@ def get_face_frames2(path, frame_rngs, jumps=4, margin=30, mtcnn=None, size: "(h
     return rng_faces
 
 
+def crop(frame, bb):
+    return frame[bb[1]:bb[3], bb[0]:bb[2]]
+
+
+def expand_detection(detections, idx, length):
+    assert len(detections) == len(
+        idx), 'length of detection and indices must be same'
+
+    j = 0
+    last = detections[j] if detections[j] is not None else []
+
+    final_detections = []
+
+    for i in range(length):
+        final_detections.append([])
+        if i in idx:
+            last = detections[idx.index(i)]
+            if last is None:
+                last = []
+        final_detections[-1].append(last)
+
+
+def get_all_faces(path: 'str', detections=32, mtcnn=None, margin=20):
+    if mtcnn is None:
+        mtcnn = MTCNN(select_largest=False, device=device,)
+
+    cap = cv2.VideoCapture(path)
+    frames = []
+    next_frame = True
+    while next_frame:
+        next_frame, fr = cap.read()
+        if next_frame:
+            frames.append(cv2.cvtColor(fr, cv2.COLOR_BGR2RGB))
+    np_det_idx = np.linspace(0, len(frames), detections,
+                             endpoint=False, dtype=int)
+    detection_idx = list(map(int, np_det_idx))
+    detection_frames = [frame for i, frame in enumerate(
+        frames) if i in detection_idx]
+    detection = mtcnn.detect(detection_frames)
+    del detection_frames
+    detection = expand_detection(detection, detection_idx, len(frames))
+
+    faces = []
+    for i, bboxes in enumerate(detection):
+        faces.append([])
+        for bbox in bboxes:
+            faces.append(crop(frames[i], bbox))
+
+    return faces
+
+
 def get_face_frames(path, frame_idx, margin=30, mtcnn=None, size: "(h,w)" = (224, 224),):
     """
     Consumes more RAM as it stores all the frames in full resolution.
