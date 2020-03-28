@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="maruti",
-    version="1.3.3",
+    version="1.3.4",
     author="Ankit Saini",
     author_email="ankitsaini100205@gmail.com",
     description="Maruti Library",
