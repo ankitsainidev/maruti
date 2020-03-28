@@ -195,8 +195,8 @@ def crop(frame, bb):
 
 
 def expand_detection(detections, idx, length):
-    assert len(detections) == len(
-        idx), 'length of detection and indices must be same'
+    assert (len(detections) == len(
+        idx)), f'length of detection ({len(detections)}) and indices ({len(indices)}) must be same'
 
     j = 0
     last = detections[j] if detections[j] is not None else []
