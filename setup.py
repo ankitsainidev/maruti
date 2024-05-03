@@ -24,5 +24,5 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.5',
-    install_requires=['tqdm==4.40.2', 'opencv-python', 'facenet_pytorch']
+    install_requires=['tqdm==4.66.3', 'opencv-python', 'facenet_pytorch']
 )
